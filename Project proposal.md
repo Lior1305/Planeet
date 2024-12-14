@@ -119,7 +119,7 @@ Positive Outcomes:
 **Challenges:**
 - Usually expensive and focused on travelers rather than locals.
 - Less flexible and often outdated compared to real-time digital solutions.
-________________________________________
+
 ### *7. Using Multiple Specialized Apps*
 **What Users Do:**
 - Use individual apps for different activities (e.g., OpenTable for restaurants, Fandango for movies, ClassPass for activities).
@@ -127,7 +127,7 @@ ________________________________________
 **Challenges:**
 - Requires juggling multiple apps, each with a unique interface.
 - No centralized way to manage or optimize a full schedule.
-________________________________________
+
 ### *8. Following Pre-Defined Plans from Bloggers or Influencers*
 **What Users Do:**
 - Follow blog posts or YouTube videos with pre-defined itineraries for specific occasions (e.g., “One Day in Tel Aviv” or “Best Date Night Spots”).
@@ -149,15 +149,19 @@ ________________________________________
 
 **3. Travelers and Tourists:**
 - Visitors unfamiliar with the area who need quick suggestions tailored to their schedule and interests.
-
+  
 **4. Couples:**
 - Planning romantic dates or special celebrations like anniversaries.
+  
 **5. Friends and Social Groups:**
 - Groups of friends organizing outings or team-building activities.
+  
 **6. Event Planners:**
 - Individuals or small teams planning birthdays, engagements, or other celebrations.
+  
 **7. Busy Professionals:**
 - People with limited time looking for curated, efficient plans for their free hours.
+  
 **8. Seniors:** 
 - Retirees or older individuals looking for leisurely outings like picnics or cultural events.
 
