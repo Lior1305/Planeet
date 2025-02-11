@@ -46,53 +46,72 @@ Users currently rely on various methods to plan outings, each with significant l
 
 ## *Rest APIs*
 
-#### users service:
+### Users Service:
 1. **Create User (POST /users)**
-*What it does:* Adds a new user to the system.
-*Why it’s needed:* Enables user onboarding by registering accounts with necessary details like name, email, and preferences.
+   - *What it does:* Adds a new user to the system.
+   - *Why it’s needed:* Enables user onboarding by registering accounts with necessary details like name, email, and preferences.
 2. **Retrieve User by ID (GET /users/{id})**
-*What it does:* Fetches a specific user's information based on their unique ID.
-*Why it’s needed:* Allows personalized access to a user’s stored details.
+   - *What it does:* Fetches a specific user's information based on their unique ID.
+   - *Why it’s needed:* Allows personalized access to a user’s stored details.
 3. **Retrieve All Users (GET /users)**
-*What it does:* Returns a list of all registered users.
-*Why it’s needed:* Useful for administrative purposes or group-related features, like finding friends or managing event participants.
+   - *What it does:* Returns a list of all registered users.
+   - *Why it’s needed:* Useful for administrative purposes or group-related features, like finding friends or managing event participants.
 4. **Update User (PUT /users/{id})**
-*What it does:* Modifies the details of an existing user.
-*Why it’s needed:* It allows users to update their information, such as preferences, contact details, passwords, etc.
+   - *What it does:* Modifies the details of an existing user.
+   - *Why it’s needed:* It allows users to update their information, such as preferences, contact details, passwords, etc.
 5. **Delete User (DELETE /users/{id})**
-*What it does:* Removes a user from the system.
-*Why it’s needed:* Supports account management, ensuring users can delete their profiles when no longer needed.
+   - *What it does:* Removes a user from the system.
+   - *Why it’s needed:* Supports account management, ensuring users can delete their profiles when no longer needed.
 
+### Preferences Service:
+1. **Create Preferences (POST /preferences)**
+   - *What it does:* Adds preference settings for a user.
+   - *Why it’s needed:* Allows users to set their preferences for outings, such as venue types, locations, or interests, which the system uses to tailor recommendations.
+2. **Retrieve Preferences (GET /preferences/{userId})**
+   - *What it does:* Fetches the preference settings for a specific user.
+   - *Why it’s needed:* Enables retrieval of a user's settings to adjust recommendations or during user reviews of their profile settings.
+3. **Update Preferences (PUT /preferences/{userId})**
+   - *What it does:* Updates existing preferences for a user.
+   - *Why it’s needed:* Allows users to change their preferences, which can evolve over time as their interests change.
+4. **Delete Preferences (DELETE /preferences/{userId})**
+   - *What it does:* Removes a user’s preference settings.
+   - *Why it’s needed:* Useful for cleaning up data when a user decides to reset their preferences or deletes their account.
 
-#### Preferences service:
-1. **Set User Preferences (POST /preferences/{userId})**
-   *What it does:* Stores or updates user preferences for venues and activities.
-   *Why it’s needed:* Enables customization of venue and activity recommendations to align with user interests.
-2. **Get User Preferences (GET /preferences/{userId})**
-   *What it does:* Retrieves the stored preferences of a user.
-   *Why it’s needed:* Allows users to review and modify their existing preferences as needed.
-
-#### Venues and Activities service:
+### Venues and Activities Service:
 1. **List Venues (GET /venues)**
-   *What it does:* Retrieves a list of all available venues and activities.
-   *Why it’s needed:* Provides users with options to select from for planning outings.
+   - *What it does:* Retrieves a list of all available venues and activities.
+   - *Why it’s needed:* Provides users with browsing capabilities to explore all possible activities and venues.
 2. **Get Venue Details (GET /venues/{venueId})**
-   *What it does:* Provides detailed information about a specific venue or activity.
-   *Why it’s needed:* Enables users to make informed decisions based on venue features, availability, and reviews.
+   - *What it does:* Provides detailed information about a specific venue or activity.
+   - *Why it’s needed:* Crucial for users who wish to learn more about a venue or activity before making a decision.
+3. **Create Venue (POST /venues)**
+   - *What it does:* Adds a new venue or activity to the system.
+   - *Why it’s needed:* Allows administrators to expand the offerings available to users.
+4. **Update Venue (PUT /venues/{venueId})**
+   - *What it does:* Modifies details of an existing venue or activity.
+   - *Why it’s needed:* Necessary for maintaining accurate and current information on venues and activities.
+5. **Delete Venue (DELETE /venues/{venueId})**
+   - *What it does:* Removes a venue or activity from the listing.
+   - *Why it’s needed:* Helps keep the database clean from outdated or no longer available options.
 
-#### Planning service:
+### Planning Service:
 1. **Create Plan (POST /plans)**
-   *What it does:* Allows users to create a new plan for an outing based on selected venues and dates.
-   *Why it’s needed:* Facilitates the organization of group outings by scheduling and coordinating the logistics.
+   - *What it does:* Allows users to create a new plan for an outing based on selected venues and dates.
+   - *Why it’s needed:* Enables the core functionality of organizing outings based on user inputs and preferences.
 2. **Retrieve Plan (GET /plans/{planId})**
-   *What it does:* Fetches details of a specific plan.
-   *Why it’s needed:* Provides participants with information about the upcoming outing, such as time, place, and agenda.
+   - *What it does:* Fetches details of a specific planned outing.
+   - *Why it’s needed:* Allows users to review the details and status of their planned outings.
+3. **Update Plan (PUT /plans/{planId})**
+   - *What it does:* Updates the details of an existing plan.
+   - *Why it’s needed:* Provides flexibility to change outing plans as circumstances or preferences change.
+4. **Delete Plan (DELETE /plans/{planId})**
+   - *What it does:* Deletes an existing outing plan.
+   - *Why it’s needed:* Useful for users who wish to cancel or remove planned outings.
 
-#### Booking service:
-1. **Book Venue (POST /bookings/{venueId})**
-   *What it does:* Initiates the booking process for a chosen venue.
-   *Why it’s needed:* Secures the venue for the user’s planned date and time, ensuring the outing can proceed as scheduled.
-
+### Booking Service:
+1. **Redirect to Booking (GET /bookings/{venueId})**
+   - *What it does:* Provides a direct link or mechanism to book a selected venue or activity.
+   - *Why it’s needed:* Facilitates the booking process by directing users to the appropriate external booking platform.
 ---
 
 ## *User's use cases*
