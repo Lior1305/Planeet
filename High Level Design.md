@@ -63,19 +63,19 @@ Users currently rely on various methods to plan outings, each with significant l
    - *What it does:* Removes a user from the system.
    - *Why it’s needed:* Supports account management, ensuring users can delete their profiles when no longer needed.
 
-### Preferences Service:
-1. **Create Preferences (POST /preferences)**
-   - *What it does:* Adds preference settings for a user.
-   - *Why it’s needed:* Allows users to set their preferences for outings, such as venue types, locations, or interests, which the system uses to tailor recommendations.
-2. **Retrieve Preferences (GET /preferences/{userId})**
-   - *What it does:* Fetches the preference settings for a specific user.
-   - *Why it’s needed:* Enables retrieval of a user's settings to adjust recommendations or during user reviews of their profile settings.
-3. **Update Preferences (PUT /preferences/{userId})**
-   - *What it does:* Updates existing preferences for a user.
-   - *Why it’s needed:* Allows users to change their preferences, which can evolve over time as their interests change.
-4. **Delete Preferences (DELETE /preferences/{userId})**
-   - *What it does:* Removes a user’s preference settings.
-   - *Why it’s needed:* Useful for cleaning up data when a user decides to reset their preferences or deletes their account.
+### Outing Profile Service:
+1. **Create Outing Profile (POST /profiles)**
+   - *What it does:* Stores a new outing-profile document for a user—preferred venue types, locations, days, budgets, etc.
+   - *Why it’s needed:* Serves as the canonical source of user preferences, which the Planning Service and recommendation logic rely on.recommendations.
+2. **Retrieve Outing Profile (GET /profiles/{userId})**
+   - *What it does:* Fetches the complete outing profile for a specific user.
+   - *Why it’s needed:* Lets UIs and backend services read a user’s historical preferences when generating suggestions or displaying the profile.
+3. **Update Outing Profile (PUT /profiles/{userId})**
+   - *What it does:* Replaces the existing profile with an updated set of preferences.
+   - *Why it’s needed:* Keeps the profile synchronized with the user’s evolving tastes, ensuring future recommendations stay relevant.
+4. **Delete Outing Profile (DELETE /profiles/{userId})**
+   - *What it does:* Permanently removes the user’s outing-profile and all stored preference data.
+   - *Why it’s needed:* upports “reset profile,” account deletion, or GDPR/right-to-be-forgotten requests.
 
 ### Venues and Activities Service:
 1. **List Venues (GET /venues)**
