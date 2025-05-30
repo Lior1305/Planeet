@@ -15,7 +15,8 @@ import java.util.Map;
 public class UserService {
 
     @Autowired
-    private UserRepository userRepository;
+    private  UserRepository userRepository;
+
 
     public Flux<User> getAllUsers() {
         return userRepository.findAll();
@@ -32,9 +33,23 @@ public class UserService {
     }
 
 
-    public Mono<User> createUser(User user) {
+ public Mono<User> createUser(User user) {
         return userRepository.save(user);
-    }
+  }
+
+    /*public Mono<User> createUser(User user) {
+        return userRepository.save(user)
+                .flatMap(savedUser -> {
+                    // Send HTTP POST to outing-profile-service
+                    return webClient.post()
+                            .uri("http://localhost:8081/profiles")  // adjust port if needed
+                            .bodyValue(Map.of("userId", savedUser.getId()))
+                            .retrieve()
+                            .bodyToMono(Void.class)  // assuming no body returned
+                            .thenReturn(savedUser);
+                });
+    }*/
+
 
     public Mono<Void> deleteUser(String id) {
         return userRepository.deleteById(id);
