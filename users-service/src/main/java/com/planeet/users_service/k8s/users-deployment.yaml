@@ -34,16 +34,28 @@ spec:
     metadata:
       labels:
         app: users-service
+#    spec:
+#      containers:
+#        - name: users-service
+#          image: users-service:latest
+#          imagePullPolicy: Never
+#          ports:
+#            - containerPort: 8080
+#
     spec:
       containers:
         - name: users-service
-          image: users-service:latest
-          imagePullPolicy: Never
+          imagePullPolicy: Always
+          image: liorberlin/users-service:v1.8
           ports:
-            - containerPort: 8080
+            - containerPort: 80
+
+
           env:
             - name: SPRING_DATA_MONGODB_URI
               value: mongodb://mongo:27017/usersdb
+            - name: OUTING_PROFILE_SERVICE_BASE_URL
+              value: http://outing-profile-service
 
 
 #      containers:

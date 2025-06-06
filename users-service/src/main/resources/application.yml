@@ -1,3 +1,11 @@
 outing:
   profile-service:
     base-url: http://outing-profile-service
+logging:
+  level:
+    root: INFO
+    com.planeet: DEBUG
+spring:
+  data:
+    mongodb:
+      uri: mongodb://mongo:27017/usersdb
