@@ -1,25 +1,3 @@
-#apiVersion: apps/v1
-#kind: Deployment
-#metadata:
-#  name: user-service
-#spec:
-#  replicas: 1
-#  selector:
-#    matchLabels:
-#      app: user-service
-#  template:
-#    metadata:
-#      labels:
-#        app: user-service
-#    spec:
-#      containers:
-#        - name: user-service
-#          image: user-service:latest
-#          ports:
-#            - containerPort: 8080
-#          env:
-#            - name: MONGO_URL
-#              value: "mongodb://user:password@mongo:27017/"
 
 apiVersion: apps/v1
 kind: Deployment
@@ -34,39 +12,16 @@ spec:
     metadata:
       labels:
         app: users-service
-#    spec:
-#      containers:
-#        - name: users-service
-#          image: users-service:latest
-#          imagePullPolicy: Never
-#          ports:
-#            - containerPort: 8080
-#
     spec:
       containers:
         - name: users-service
+          image: liorberlin/users-service:v2.3
           imagePullPolicy: Always
-          image: liorberlin/users-service:v1.8
           ports:
-            - containerPort: 80
-
-
+            - containerPort: 8080
           env:
             - name: SPRING_DATA_MONGODB_URI
               value: mongodb://mongo:27017/usersdb
-            - name: OUTING_PROFILE_SERVICE_BASE_URL
-              value: http://outing-profile-service
-
-
-#      containers:
-#        - name: users-service
-#          image: your-dockerhub-username/users-service:latest
-#          ports:
-#            - containerPort: 8080
-#          env:
-#            - name: SPRING_DATA_MONGODB_URI
-#              value: mongodb://mongo:27017/usersdb
-#          imagePullPolicy: Never
 
 ---
 apiVersion: v1
