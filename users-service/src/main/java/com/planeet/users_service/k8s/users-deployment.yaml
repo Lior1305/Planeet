@@ -46,7 +46,7 @@ spec:
       containers:
         - name: users-service
           imagePullPolicy: Always
-          image: liorberlin/users-service:v1.8
+          image: liorberlin/users-service:v2.3
           ports:
             - containerPort: 80
 
