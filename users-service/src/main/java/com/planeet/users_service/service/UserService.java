@@ -10,13 +10,15 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class UserService {
 
     @Autowired
     private  UserRepository userRepository;
-
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     public Flux<User> getAllUsers() {
         return userRepository.findAll();
@@ -34,8 +36,12 @@ public class UserService {
 
 
  public Mono<User> createUser(User user) {
-        return userRepository.save(user);
-  }
+     log.info("Received request to create user: {}", user);
+        return userRepository.save(user).doOnNext(saved-> System.out.println("Saved User: "+ saved));
+    }
+
+
+
 
     /*public Mono<User> createUser(User user) {
         return userRepository.save(user)
