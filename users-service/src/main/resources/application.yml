@@ -1,0 +1,3 @@
+outing:
+  profile-service:
+    base-url: http://outing-profile-service
