@@ -2,13 +2,23 @@ package com.planeet.users_service.service;
 import com.planeet.users_service.model.User;
 import com.planeet.users_service.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
+import jakarta.annotation.PostConstruct;
+
+
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -16,6 +26,15 @@ public class UserService {
 
     @Autowired
     private  UserRepository userRepository;
+    @Value("${outing.profile-service.base-url}")
+    private String outingProfileServiceBaseUrl;
+
+    private WebClient webClient;
+
+    @PostConstruct
+    public void initWebClient() {
+        this.webClient = WebClient.create(outingProfileServiceBaseUrl);
+    }
 
 
     public Flux<User> getAllUsers() {
@@ -33,9 +52,27 @@ public class UserService {
     }
 
 
- public Mono<User> createUser(User user) {
-        return userRepository.save(user);
-  }
+// public Mono<User> createUser(User user) {
+//        // todo : need to send a request to outing profile service to create a profile with the ID and name
+//        return userRepository.save(user);
+//  }
+
+    public Mono<User> createUser(User user) {
+        return userRepository.save(user)
+                .flatMap(savedUser -> {
+                    Map<String, Object> profileRequest = new HashMap<>();
+                    profileRequest.put("userId", savedUser.getId());
+                    profileRequest.put("username", savedUser.getUsername());
+
+                    return webClient.post()
+                            .uri("/profiles")  // ✅ relative to the base URL
+                            .bodyValue(profileRequest)
+                            .retrieve()
+                            .bodyToMono(Void.class)
+                            .thenReturn(savedUser);
+                });
+    }
+
 
     /*public Mono<User> createUser(User user) {
         return userRepository.save(user)
