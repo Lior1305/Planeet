@@ -14,13 +14,13 @@ spec:
     spec:
       containers:
         - name: outing-profile-service
-          image: outing-profile-service:latest
+          image: nikaklimenchuk/outing-profile-service:v1.0
           ports:
             - containerPort: 5000
           env:
             - name: MONGO_URI
               value: mongodb://mongo:27017/outing_profiles
-          imagePullPolicy: Never
+          imagePullPolicy: Always
 ---
 apiVersion: v1
 kind: Service
