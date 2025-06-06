@@ -34,23 +34,13 @@ spec:
     metadata:
       labels:
         app: users-service
-#    spec:
-#      containers:
-#        - name: users-service
-#          image: users-service:latest
-#          imagePullPolicy: Never
-#          ports:
-#            - containerPort: 8080
-#
     spec:
       containers:
         - name: users-service
-          imagePullPolicy: Always
           image: liorberlin/users-service:v2.3
+          imagePullPolicy: Always
           ports:
-            - containerPort: 80
-
-
+            - containerPort: 8080
           env:
             - name: SPRING_DATA_MONGODB_URI
               value: mongodb://mongo:27017/usersdb

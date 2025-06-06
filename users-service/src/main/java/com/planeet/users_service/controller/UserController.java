@@ -31,9 +31,19 @@ public class UserController {
         return userService.getUserById(id);
     }
 
-    @PostMapping
-    public Mono<User> createUser(@RequestBody User user) {
-        return userService.createUser(user);
+//    @PostMapping
+//    public Mono<User> createUser(@RequestBody User user) {
+//        return userService.createUser(user);
+//    }
+
+    @PostMapping("/users")
+    public Mono<ResponseEntity<User>> createUser(@RequestBody User user) {
+        return userService.createUser(user)
+                .map(ResponseEntity::ok)
+                .onErrorResume(e -> {
+                    e.printStackTrace();  // ✅ log the real issue
+                    return Mono.just(ResponseEntity.status(500).build());
+                });
     }
 
    @PutMapping("/{id}")
