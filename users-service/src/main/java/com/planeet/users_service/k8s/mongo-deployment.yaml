@@ -12,6 +12,7 @@ spec:
       labels:
         app: mongo
     spec:
+      restartPolicy: Always
       containers:
         - name: mongo
           image: mongo:5
@@ -20,10 +21,19 @@ spec:
           volumeMounts:
             - name: mongo-storage
               mountPath: /data/db
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
       volumes:
         - name: mongo-storage
           emptyDir: {}
+
 ---
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -32,6 +42,8 @@ spec:
   selector:
     app: mongo
   ports:
-    - protocol: TCP
+    - name: mongo
+      protocol: TCP
       port: 27017
       targetPort: 27017
+  type: ClusterIP
