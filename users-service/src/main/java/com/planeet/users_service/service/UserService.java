@@ -1,43 +1,73 @@
 package com.planeet.users_service.service;
+
 import com.planeet.users_service.model.User;
 import com.planeet.users_service.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
 public class UserService {
 
+    private final Logger log = LoggerFactory.getLogger(UserService.class);
+    private final WebClient webClient;
+    private final UserRepository userRepository;
+
     @Autowired
-    private  UserRepository userRepository;
-    private static final Logger log = LoggerFactory.getLogger(UserService.class);
+    public UserService(WebClient webClient, UserRepository userRepository) {
+        this.webClient = webClient;
+        this.userRepository = userRepository;
+    }
 
     public Flux<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    @GetMapping("/{id}")
-    public Mono<ResponseEntity<User>> getUserById(@PathVariable String id) {
-        return userRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
+    public Mono<User> createUser(User user) {
+        log.info("Received request to create user: {}", user);
+
+        return userRepository.save(user)
+                .flatMap(savedUser -> {
+                    log.info("Saved user: {}", savedUser);
+                    return createUserProfile(savedUser)
+                            .thenReturn(savedUser);
+                });
     }
 
+    private Mono<Void> createUserProfile(User savedUser) {
+        Map<String, Object> profileRequest = Map.of(
+                "user_id", savedUser.getId(),
+                "name", savedUser.getUsername()
+        );
 
- public Mono<User> createUser(User user) {
-     log.info("Received request to create user: {}", user);
-        return userRepository.save(user).doOnNext(saved-> System.out.println("Saved User: "+ saved));
+        return webClient.post()
+                .uri("/profiles")
+                .bodyValue(profileRequest)
+                .retrieve()
+                .toBodilessEntity()
+                .doOnError(throwable -> {
+                    if (throwable instanceof WebClientResponseException) {
+                        WebClientResponseException ex = (WebClientResponseException) throwable;
+                        log.error("Profile creation failed with status: {} and body: {}",
+                                ex.getStatusCode(), ex.getResponseBodyAsString());
+                    } else {
+                        log.error("Profile creation failed: {}", throwable.getMessage());
+                    }
+                })
+                .onErrorMap(throwable -> new RuntimeException("Profile creation error: " + throwable.getMessage()))
+                .then();
     }
 
-
+    public Mono<User> getUserById(String id) {
+        return userRepository.findById(id);
+    }
 
     public Mono<Void> deleteUser(String id) {
         return userRepository.deleteById(id);
@@ -58,11 +88,9 @@ public class UserService {
                     case "username" -> user.setUsername((String) value);
                     case "email" -> user.setEmail((String) value);
                     case "password" -> user.setPassword((String) value);
-                    // Add more fields if necessary
                 }
             });
             return userRepository.save(user);
         });
     }
-
 }
