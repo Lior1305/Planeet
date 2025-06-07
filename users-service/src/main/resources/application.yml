@@ -1,11 +1,19 @@
+spring:
+  application:
+    name: users-service
+
+  data:
+    mongodb:
+      uri: mongodb://mongo:27017/usersdb
+
+server:
+  port: 8080
+
 outing:
   profile-service:
     base-url: http://outing-profile-service
+
 logging:
   level:
     root: INFO
     com.planeet: DEBUG
-spring:
-  data:
-    mongodb:
-      uri: mongodb://mongo:27017/usersdb
