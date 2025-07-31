@@ -16,14 +16,12 @@ USER_PID=$!
 kubectl port-forward svc/outing-profile-service 5000:80 &
 OUTING_PID=$!
 
+kubectl port-forward svc/mongo 27017:27017 &
+MONGO_PID=$!
+
 echo "✅ Port forwarding started."
 echo "Users Service: http://localhost:8080"
 echo "Outing Profile Service: http://localhost:5000"
 echo "Press Ctrl+C to stop."
 
-# Wait to keep the script alive
-wait $USER_PID $OUTING_PID
-
-
-# To run this script from PowerShell, use:
-#     bash ./run-k8s.sh
+wait $USER_PID $OUTING_PID $MONGO_PID
