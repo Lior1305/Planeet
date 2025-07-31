@@ -1,27 +1,22 @@
-import os
 import logging
-from flask import Flask, jsonify, request
-from pymongo import MongoClient
+from flask import Blueprint, jsonify, request
+from .database import db
+from .models import Profile
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+# Create blueprint for routes
+api = Blueprint('api', __name__)
 
-# MongoDB connection
-mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
-client = MongoClient(mongo_uri)
-db = client.outing_profiles
-profiles_collection = db.profiles
-
-@app.route('/')
+@api.route('/')
 def home():
+    """Home endpoint"""
     logger.info("Home endpoint was hit")
     return jsonify({"message": "Welcome to Outing Profile Server"})
 
-@app.route('/profiles', methods=['POST'])
+@api.route('/profiles', methods=['POST'])
 def add_profile():
+    """Add a new profile"""
     try:
         data = request.get_json()
         user_id = data.get("user_id")
@@ -33,25 +28,24 @@ def add_profile():
             logger.warning("Missing user_id or name in request")
             return jsonify({"error": "user_id and name are required"}), 400
 
-        profile = {"user_id": user_id, "name": name}
-        profiles_collection.insert_one(profile)
+        profile = Profile(user_id=user_id, name=name)
+        profiles_collection = db.get_profiles_collection()
+        profiles_collection.insert_one(profile.to_dict())
 
-        logger.info(f"Profile added: {profile}")
+        logger.info(f"Profile added: {profile.to_dict()}")
         return jsonify({"message": "Profile added successfully"}), 201
     except Exception as e:
         logger.error(f"Error adding profile: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/profiles', methods=['GET'])
+@api.route('/profiles', methods=['GET'])
 def get_profiles():
+    """Get all profiles"""
     try:
+        profiles_collection = db.get_profiles_collection()
         profiles = list(profiles_collection.find({}, {"_id": 0}))
         logger.info(f"Retrieved {len(profiles)} profiles")
         return jsonify(profiles), 200
     except Exception as e:
         logger.error(f"Error retrieving profiles: {e}")
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    logger.info("Starting Outing Profile Server...")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+        return jsonify({"error": str(e)}), 500 
