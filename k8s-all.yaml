@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: outing-profile-service
-          image: nikaklimenchuk/outing-profile-service:v1.3
+          image: nikaklimenchuk/outing-profile-service:v1.4
           ports:
             - containerPort: 5000
           env:
