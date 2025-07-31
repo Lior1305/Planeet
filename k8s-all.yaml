@@ -21,6 +21,13 @@ spec:
             - name: MONGO_URI
               value: mongodb://mongo:27017/outing_profiles
           imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -111,6 +118,13 @@ spec:
               value: mongodb://mongo:27017/usersdb
             - name: OUTING_PROFILE_SERVICE_BASE_URL
               value: http://outing-profile-service
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
 
 ---
 
