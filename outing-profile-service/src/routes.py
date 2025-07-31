@@ -40,12 +40,58 @@ def add_profile():
 
 @api.route('/profiles', methods=['GET'])
 def get_profiles():
-    """Get all profiles"""
+    """Get all profiles or a specific profile by user_id"""
     try:
+        user_id = request.args.get('user_id')
         profiles_collection = db.get_profiles_collection()
-        profiles = list(profiles_collection.find({}, {"_id": 0}))
-        logger.info(f"Retrieved {len(profiles)} profiles")
-        return jsonify(profiles), 200
+        
+        if user_id:
+            # Get specific profile by user_id
+            profile = profiles_collection.find_one({"user_id": user_id}, {"_id": 0})
+            if profile:
+                logger.info(f"Retrieved profile for user_id: {user_id}")
+                return jsonify(profile), 200
+            else:
+                logger.warning(f"Profile not found for user_id: {user_id}")
+                return jsonify({"error": "Profile not found"}), 404
+        else:
+            # Get all profiles
+            profiles = list(profiles_collection.find({}, {"_id": 0}))
+            logger.info(f"Retrieved {len(profiles)} profiles")
+            return jsonify(profiles), 200
+            
     except Exception as e:
         logger.error(f"Error retrieving profiles: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/profiles', methods=['DELETE'])
+def delete_profile():
+    """Delete a profile by user_id query parameter"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            logger.warning("Missing user_id query parameter")
+            return jsonify({"error": "user_id query parameter is required"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Check if profile exists
+        existing_profile = profiles_collection.find_one({"user_id": user_id})
+        if not existing_profile:
+            logger.warning(f"Profile with user_id {user_id} not found")
+            return jsonify({"error": "Profile not found"}), 404
+        
+        # Delete the profile
+        result = profiles_collection.delete_one({"user_id": user_id})
+        
+        if result.deleted_count > 0:
+            logger.info(f"Profile deleted successfully for user_id: {user_id}")
+            return jsonify({"message": "Profile deleted successfully"}), 200
+        else:
+            logger.warning(f"Failed to delete profile for user_id: {user_id}")
+            return jsonify({"error": "Failed to delete profile"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error deleting profile: {e}")
         return jsonify({"error": str(e)}), 500 
