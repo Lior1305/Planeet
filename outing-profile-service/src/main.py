@@ -1,5 +1,6 @@
 import logging
 from flask import Flask
+from flask_cors import CORS
 from .database import db
 from .routes import api
 
@@ -10,6 +11,9 @@ logger = logging.getLogger(__name__)
 def create_app():
     """Application factory"""
     app = Flask(__name__)
+    
+    # Enable CORS
+    CORS(app)
     
     # Initialize database
     db.connect()
