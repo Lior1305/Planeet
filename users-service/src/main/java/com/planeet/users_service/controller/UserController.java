@@ -14,6 +14,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
+@CrossOrigin(origins = "http://localhost:3000")
 public class UserController {
 
     private final Logger log = LoggerFactory.getLogger(UserController.class);  // Removed 'static'

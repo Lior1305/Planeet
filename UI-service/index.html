@@ -87,7 +87,37 @@
         box-sizing: border-box;
     }
 
-    
+    /* Loading state */
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    /* Success/Error messages */
+    .message {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .message.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    /* Required field indicator */
+    .required {
+        color: #dc3545;
+    }
   </style>
 </head>
 <body>
@@ -111,10 +141,10 @@
   </div>
 
   <div id="register" class="hidden form-container" style="margin-top: -130px;">
-    <input class="input-field" id="regUsername" type="text" placeholder="Username" />
-    <input class="input-field" id="regPassword" type="password" placeholder="Password" />
-    <input class="input-field" id="regEmail" type="email" placeholder="Email" />
-    <input class="input-field" id="regPhone" type="tel" placeholder="Phone Number" />
+    <input class="input-field" id="regUsername" type="text" placeholder="Username *" required />
+    <input class="input-field" id="regPassword" type="password" placeholder="Password *" required />
+    <input class="input-field" id="regEmail" type="email" placeholder="Email *" required />
+    <input class="input-field" id="regPhone" type="tel" placeholder="Phone Number (optional)" />
     <div class="btn-row">
         <button class="btn" onclick="validateRegister()">Register</button>
         <button class="btn" onclick="goHome()">Back</button>
@@ -134,7 +164,7 @@
     <p style="color:#BC9BF3; font-size:18px; margin-top:10px; text-align: center;">Every great time starts with a great plan — let’s create yours.</p>
     <div class="btn-row">
       <button class="btn" onclick="showPage('newPlan')">Start New Plan</button>
-      <button class="btn" onclick="goHome()">Log out</button>
+      <button class="btn" onclick="logout()">Log out</button>
     </div>
   </div>
 
@@ -185,66 +215,6 @@
     </div>
   </div>
 
-  <script>
-    function showPage(page) {
-      ['home', 'login', 'register', 'landing', 'welcome', 'newPlan'].forEach(p => {
-        const el = document.getElementById(p);
-        if (el) el.classList.add('hidden');
-      });
-      const target = document.getElementById(page);
-      if (target) target.classList.remove('hidden');
-    }
-
-    function goHome() {
-      showPage('home');
-    }
-
-    function validateRegister() {
-      const email = document.getElementById('regEmail').value;
-      const phone = document.getElementById('regPhone').value;
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const phoneRegex = /^05\d{8}$/;
-
-      if (!emailRegex.test(email)) {
-        alert("Please enter a valid email address.");
-        return;
-      }
-      if (!phoneRegex.test(phone)) {
-        alert("Please enter a valid Israeli phone number (e.g., 05XXXXXXXX).");
-        return;
-      }
-
-      showPage('landing');
-    }
-
-    function login() {
-      const user = document.getElementById('loginUsername').value;
-      const pass = document.getElementById('loginPassword').value;
-      if (user && pass) {
-        showPage('welcome');
-      } else {
-        alert("Please enter both username and password.");
-      }
-    }
-    function validateNewPlan() {
-  const inputs = document.querySelectorAll('#newPlan .input-field');
-  let isValid = true;
-  inputs.forEach((input) => {
-    if (input.tagName !== 'TEXTAREA' && !input.value.trim()) {
-      isValid = false;
-    }
-  });
-  if (!isValid) {
-    alert('Please fill in all fields.');
-  } else {
-    alert('Plan created successfully!');
-    showPage('landing');
-  }
-}
-
-
-
-    
-  </script>
+  <script src="js/app.js"></script>
 </body>
 </html>
