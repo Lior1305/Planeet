@@ -1,5 +1,5 @@
-// Planeet UI Application Logic
-class PlaneetApp {
+// Planeet Welcome Page Logic
+class WelcomeApp {
     constructor() {
         this.currentUser = null;
         this.init();
@@ -8,14 +8,15 @@ class PlaneetApp {
     init() {
         this.setupEventListeners();
         this.showPage('home');
+        console.log('Welcome App initialized at:', window.location.href);
     }
 
     setupEventListeners() {
-        // Add any global event listeners here
-        console.log('Planeet App initialized');
+        console.log('Welcome App event listeners setup');
     }
 
     showPage(page) {
+        console.log('Showing page:', page);
         // Hide all pages
         ['home', 'login', 'register'].forEach(p => {
             const el = document.getElementById(p);
@@ -33,6 +34,7 @@ class PlaneetApp {
     }
 
     async validateRegister() {
+        console.log('validateRegister called');
         const username = document.getElementById('regUsername').value.trim();
         const password = document.getElementById('regPassword').value.trim();
         const email = document.getElementById('regEmail').value.trim();
@@ -90,6 +92,7 @@ class PlaneetApp {
     }
 
     async login() {
+        console.log('login called');
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
         
@@ -128,43 +131,37 @@ class PlaneetApp {
     }
 
     redirectToDashboard() {
-        console.log('Redirecting to dashboard...');
+        console.log('=== REDIRECT TO DASHBOARD ===');
         console.log('Current user:', this.currentUser);
+        console.log('Current URL:', window.location.href);
+        console.log('Current pathname:', window.location.pathname);
         
         // Save user data to localStorage
         localStorage.setItem('planeetUser', JSON.stringify(this.currentUser));
         console.log('User data saved to localStorage');
         
-        // Try multiple redirect approaches
-        console.log('Current URL:', window.location.href);
-        console.log('Current pathname:', window.location.pathname);
+        // Force redirect to dashboard.html
+        const dashboardUrl = window.location.origin + '/dashboard.html';
+        console.log('Redirecting to:', dashboardUrl);
         
-        // Check if we're on the root path (localhost:3000)
-        if (window.location.pathname === '/' || window.location.pathname === '') {
-            console.log('On root path, redirecting to dashboard.html');
-            window.location.href = 'dashboard.html';
-        } else {
-            // Get the base URL
-            const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
-            console.log('Base URL:', baseUrl);
-            
-            const dashboardUrl = baseUrl + 'dashboard.html';
-            console.log('Dashboard URL:', dashboardUrl);
-            
-            // Try the redirect
+        // Try multiple redirect methods
+        try {
+            window.location.href = dashboardUrl;
+        } catch (error) {
+            console.error('Redirect error:', error);
             try {
-                window.location.href = dashboardUrl;
-            } catch (error) {
-                console.error('Redirect error:', error);
-                // Fallback
                 window.location.replace(dashboardUrl);
+            } catch (error2) {
+                console.error('Replace error:', error2);
+                // Last resort - try relative path
+                window.location.href = 'dashboard.html';
             }
         }
     }
 
     // Test function to debug redirect issues
     testRedirect() {
-        console.log('Testing redirect...');
+        console.log('=== TEST REDIRECT ===');
         console.log('Current URL:', window.location.href);
         
         localStorage.setItem('planeetUser', JSON.stringify({
@@ -173,44 +170,42 @@ class PlaneetApp {
             phone: '+972 50-123-4567'
         }));
         
-        // Check if we're on the root path (localhost:3000)
-        if (window.location.pathname === '/' || window.location.pathname === '') {
-            console.log('On root path, redirecting to dashboard.html');
-            window.location.href = 'dashboard.html';
-        } else {
-            // Get the base URL
-            const baseUrl = window.location.origin + window.location.pathname.replace('test-redirect.html', '');
-            const dashboardUrl = baseUrl + 'dashboard.html';
-            console.log('Attempting redirect to:', dashboardUrl);
-            
-            window.location.href = dashboardUrl;
-        }
+        const dashboardUrl = window.location.origin + '/dashboard.html';
+        console.log('Test redirecting to:', dashboardUrl);
+        
+        window.location.href = dashboardUrl;
     }
 }
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.planeetApp = new PlaneetApp();
+    console.log('DOM loaded, initializing Welcome App');
+    window.welcomeApp = new WelcomeApp();
 });
 
 // Global functions for HTML onclick handlers
 function showPage(page) {
-    window.planeetApp.showPage(page);
+    console.log('Global showPage called with:', page);
+    window.welcomeApp.showPage(page);
 }
 
 function goHome() {
-    window.planeetApp.goHome();
+    console.log('Global goHome called');
+    window.welcomeApp.goHome();
 }
 
 function validateRegister() {
-    window.planeetApp.validateRegister();
+    console.log('Global validateRegister called');
+    window.welcomeApp.validateRegister();
 }
 
 function login() {
-    window.planeetApp.login();
+    console.log('Global login called');
+    window.welcomeApp.login();
 }
 
 // Test function for debugging
 function testRedirect() {
-    window.planeetApp.testRedirect();
+    console.log('Global testRedirect called');
+    window.welcomeApp.testRedirect();
 } 

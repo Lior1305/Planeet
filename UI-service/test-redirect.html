@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirect Test</title>
+</head>
+<body>
+    <h1>Redirect Test Page</h1>
+    <p>This page tests if redirects work properly.</p>
+    
+    <button onclick="testRedirect()">Test Redirect to Dashboard</button>
+    <button onclick="testSimpleRedirect()">Test Simple Redirect</button>
+    
+    <script>
+        function testRedirect() {
+            console.log('Testing redirect to dashboard...');
+            localStorage.setItem('planeetUser', JSON.stringify({
+                username: 'testuser',
+                email: 'test@example.com',
+                phone: '+972 50-123-4567'
+            }));
+            
+            const baseUrl = window.location.origin + window.location.pathname.replace('test-redirect.html', '');
+            const dashboardUrl = baseUrl + 'dashboard.html';
+            console.log('Redirecting to:', dashboardUrl);
+            
+            window.location.href = dashboardUrl;
+        }
+        
+        function testSimpleRedirect() {
+            console.log('Testing simple redirect...');
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+</body>
+</html> 
