@@ -109,7 +109,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:v1.9.5
+          image: nikaklimenchuk/planeet-ui:v1.9.6
           ports:
             - containerPort: 80
           resources:
