@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Planeet Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=1.6">
+  <link rel="stylesheet" href="styles.css?v=1.9">
   <style>
     /* Dashboard-specific styles */
     body {
@@ -14,12 +14,14 @@
       padding: 0;
       min-height: 100vh;
       font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
     }
 
     .dashboard-page {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      width: 100%;
     }
 
     .dashboard-header {
@@ -30,6 +32,8 @@
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 4px 12px rgba(115, 96, 249, 0.2);
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .header-left {
@@ -61,9 +65,11 @@
     }
 
     .dashboard-nav {
-      background: rgba(255, 255, 255, 0.1);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      background: #FFE4D6 !important;
+      border-bottom: 1px solid rgba(115, 96, 249, 0.2);
       display: flex;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .nav-tab {
@@ -71,22 +77,23 @@
       padding: 16px 24px;
       background: none;
       border: none;
-      color: rgba(255, 255, 255, 0.8);
+      color: #000000 !important;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.3s ease;
       border-bottom: 3px solid transparent;
+      font-size: 16px;
     }
 
     .nav-tab:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
+      background: rgba(115, 96, 249, 0.1);
+      color: #000000 !important;
     }
 
     .nav-tab.active {
-      color: white;
-      border-bottom-color: white;
-      background: rgba(255, 255, 255, 0.1);
+      color: #000000 !important;
+      border-bottom-color: #7360F9;
+      background: rgba(115, 96, 249, 0.05);
     }
 
     .nav-tab .icon {
@@ -99,6 +106,9 @@
       padding: 32px;
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
+      width: 100%;
+      box-sizing: border-box;
+      min-height: calc(100vh - 140px); /* Adjust for header and nav height */
     }
 
     .tab-pane {
@@ -399,6 +409,50 @@
       .settings-content {
         width: 95%;
         padding: 24px;
+      }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .dashboard-header {
+        padding: 16px 20px;
+      }
+      
+      .dashboard-title {
+        font-size: 20px;
+      }
+      
+      .nav-tab {
+        padding: 12px 16px;
+        font-size: 14px;
+      }
+      
+      .nav-tab .icon {
+        font-size: 16px;
+      }
+      
+      .dashboard-content {
+        padding: 20px;
+        min-height: calc(100vh - 120px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .dashboard-header {
+        padding: 12px 16px;
+      }
+      
+      .dashboard-title {
+        font-size: 18px;
+      }
+      
+      .nav-tab {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      
+      .dashboard-content {
+        padding: 16px;
       }
     }
   </style>
