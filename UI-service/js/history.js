@@ -6,16 +6,19 @@ class HistoryPageController {
     }
 
     async init() {
-        // Load user and redirect if not authenticated
-        this.currentUser = commonUtils.getCurrentUserOrRedirect();
-        if (!this.currentUser) return;
-
+        // Load user data without requiring authentication
+        this.currentUser = commonUtils.getCurrentUser();
+        
         // Load components
         await commonUtils.loadHeader();
-        await commonUtils.loadSettingsModal();
-        
-        // Setup outings display
-        this.loadOutingsHistory();
+        if (this.currentUser) {
+            await commonUtils.loadSettingsModal();
+            // Setup outings display for authenticated users
+            this.loadOutingsHistory();
+        } else {
+            // Show login prompt for unauthenticated users
+            this.showLoginPrompt();
+        }
         
         // Setup event listeners
         this.setupEventListeners();
@@ -58,6 +61,25 @@ class HistoryPageController {
                     <a href="plan.html" class="btn btn-primary">
                         Plan Your First Outing
                     </a>
+                </div>
+            `;
+        }
+    }
+
+    showLoginPrompt() {
+        const outingsList = document.getElementById('outingsList');
+        if (outingsList) {
+            outingsList.innerHTML = `
+                <div class="login-required">
+                    <div class="login-required-content">
+                        <span class="icon">🔒</span>
+                        <h2>History Access Required</h2>
+                        <p>You need to be logged in to view your outing history.</p>
+                        <div class="login-actions">
+                            <a href="welcome.html" class="btn btn-primary">Login / Sign Up</a>
+                            <a href="plan.html" class="btn btn-ghost">Start Planning</a>
+                        </div>
+                    </div>
                 </div>
             `;
         }

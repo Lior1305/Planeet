@@ -6,21 +6,43 @@ class ProfilePageController {
     }
 
     async init() {
-        // Load user and redirect if not authenticated
-        this.currentUser = commonUtils.getCurrentUserOrRedirect();
-        if (!this.currentUser) return;
-
+        // Load user data without requiring authentication
+        this.currentUser = commonUtils.getCurrentUser();
+        
         // Load components
         await commonUtils.loadHeader();
-        await commonUtils.loadSettingsModal();
-        
-        // Setup profile display
-        this.updateProfileInfo();
+        if (this.currentUser) {
+            await commonUtils.loadSettingsModal();
+            // Setup profile display for authenticated users
+            this.updateProfileInfo();
+        } else {
+            // Show login prompt for unauthenticated users
+            this.showLoginPrompt();
+        }
         
         // Setup event listeners
         this.setupEventListeners();
         
         console.log('Profile Page Controller initialized');
+    }
+
+    showLoginPrompt() {
+        const profileContent = document.querySelector('.profile-content');
+        if (profileContent) {
+            profileContent.innerHTML = `
+                <div class="login-required">
+                    <div class="login-required-content">
+                        <span class="icon">🔒</span>
+                        <h2>Profile Access Required</h2>
+                        <p>You need to be logged in to view and manage your profile.</p>
+                        <div class="login-actions">
+                            <a href="welcome.html" class="btn btn-primary">Login / Sign Up</a>
+                            <a href="plan.html" class="btn btn-ghost">Explore Planning</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     setupEventListeners() {

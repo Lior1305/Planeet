@@ -3,37 +3,99 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Planeet - Redirecting</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=1.7">
-  <style>
-    /* Explicitly disable any floating animations */
-    .logo, .small-logo {
-      animation: none !important;
-    }
-  </style>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Plan New Outing - Planeet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=2.1">
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <h1 class="landing-text" style="font-size: 32px; margin-bottom: 16px;">Welcome to Planeet</h1>
-      <p class="subtitle">Redirecting to login page...</p>
-      <div style="text-align: center; margin-top: 20px;">
-        <button class="btn" onclick="goToWelcome()">Go to Login</button>
+  <div class="page-wrapper">
+    <!-- Header will be loaded here -->
+    <header id="appHeader"></header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-eyebrow">Plan together, fast</div>
+        <h1>Create Amazing Outings Together</h1>
+        <p>Discover the best venues, plan with friends, and make memories that last. Our smart planning system helps you find the perfect spots for any occasion.</p>
+        <button class="btn btn-primary" onclick="openPlanningForm()">
+          <span class="icon">🚀</span> Start Planning
+        </button>
       </div>
-    </div>
+    </section>
+
+    <!-- Wave Separator -->
+    <svg class="wave-sep" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,64 C240,144 480,-16 720,64 C960,144 1200,16 1440,64 L1440,120 L0,120 Z" fill="var(--accent-5)"/>
+    </svg>
+
+    <!-- Feature Cards -->
+    <section class="container">
+      <div class="feature-grid">
+        <article class="feature-card fc-1">
+          <div class="fc-icon">💬</div>
+          <h3>Decide together</h3>
+          <p>Share options and vote in seconds. No more endless group chats about where to go.</p>
+        </article>
+        <article class="feature-card fc-2">
+          <div class="fc-icon">📍</div>
+          <h3>Live venues</h3>
+          <p>Real-time availability and open status. Know before you go with up-to-date information.</p>
+        </article>
+        <article class="feature-card fc-3">
+          <div class="fc-icon">🎯</div>
+          <h3>Smart matching</h3>
+          <p>AI-powered recommendations based on your preferences and group size.</p>
+        </article>
+        <article class="feature-card fc-4">
+          <div class="fc-icon">❤️</div>
+          <h3>Save favorites</h3>
+          <p>Build your personal collection of go-to spots and share them with friends.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Highlights Band -->
+    <section class="highlights">
+      <div class="container">
+        <div class="highlights-content">
+          <div class="stat-chips">
+            <div class="stat-chip">500+ venues</div>
+            <div class="stat-chip">Real-time status</div>
+            <div class="stat-chip">Smart AI</div>
+          </div>
+          <div>
+            <h2>Why choose Planeet?</h2>
+            <p>We've built the most comprehensive venue discovery platform in Israel. From trendy cafes to hidden gems, we help you find exactly what you're looking for.</p>
+            <button class="btn btn-secondary">How it works</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer CTA -->
+    <section class="container">
+      <div class="footer-cta">
+        <h2>Ready to plan your next adventure?</h2>
+        <p>Join thousands of users who are already planning amazing outings with Planeet.</p>
+        <button class="btn btn-primary" onclick="openPlanningForm()">
+          <span class="icon">🎉</span> Book your night out
+        </button>
+      </div>
+    </section>
+
+    <!-- Planning Modal will be loaded here -->
+    <div id="planningModalMount"></div>
+
+    <!-- Settings Modal will be loaded here -->
+    <div id="settingsModalMount"></div>
   </div>
 
-  <script>
-    // Auto-redirect to welcome page
-    function goToWelcome() {
-      window.location.href = 'welcome.html';
-    }
-    
-    // Auto-redirect after 2 seconds
-    setTimeout(() => {
-      goToWelcome();
-    }, 2000);
-  </script>
+  <!-- Scripts -->
+  <script src="js/common.js?v=2.1"></script>
+  <script src="js/plan.js?v=2.1"></script>
 </body>
 </html>

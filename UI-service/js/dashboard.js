@@ -16,10 +16,8 @@ class DashboardApp {
         const userData = localStorage.getItem('planeetUser');
         if (userData) {
             this.currentUser = JSON.parse(userData);
-        } else {
-            // If no user data, redirect to login
-            window.location.href = 'index.html';
         }
+        // No redirect - allow unauthenticated access
     }
 
     populateDashboard() {

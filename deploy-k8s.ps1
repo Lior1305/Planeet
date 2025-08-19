@@ -36,7 +36,8 @@ $venuesJob = Start-Job -ScriptBlock { kubectl port-forward svc/venues-service 80
 
 Write-Host ""
 Write-Host "All services are now accessible:" -ForegroundColor Green
-Write-Host "   UI Service:            http://localhost:3000" -ForegroundColor White
+Write-Host "   UI Service:            http://localhost:3000 (local)" -ForegroundColor White
+Write-Host "   UI Service (Phone):    http://<localhost_ip_address>:30000" -ForegroundColor Cyan
 Write-Host "   Users Service:        http://localhost:8080" -ForegroundColor White
 Write-Host "   Outing Profile Service: http://localhost:5000" -ForegroundColor White
 Write-Host "   MongoDB:              localhost:27017" -ForegroundColor White

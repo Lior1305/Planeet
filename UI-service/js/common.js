@@ -4,7 +4,17 @@ class CommonUtils {
         this.currentUser = null;
     }
 
-    // Get current user or redirect to login
+    // Get current user without redirecting
+    getCurrentUser() {
+        const userData = localStorage.getItem('planeetUser');
+        if (userData) {
+            this.currentUser = JSON.parse(userData);
+            return this.currentUser;
+        }
+        return null;
+    }
+
+    // Get current user or redirect to login (for backward compatibility)
     getCurrentUserOrRedirect() {
         const userData = localStorage.getItem('planeetUser');
         if (userData) {
@@ -15,6 +25,41 @@ class CommonUtils {
             window.location.href = 'index.html';
             return null;
         }
+    }
+
+    // Check if user is authenticated for protected features
+    isAuthenticated() {
+        return this.currentUser !== null;
+    }
+
+    // Show login prompt for protected features
+    showLoginPrompt(featureName = 'this feature') {
+        const modal = document.createElement('div');
+        modal.className = 'login-prompt-modal';
+        modal.innerHTML = `
+            <div class="login-prompt-content">
+                <div class="login-prompt-header">
+                    <h3>🔒 Login Required</h3>
+                    <button class="close-btn" onclick="this.parentElement.parentElement.parentElement.remove()">×</button>
+                </div>
+                <div class="login-prompt-body">
+                    <p>You need to be logged in to use ${featureName}.</p>
+                    <div class="login-prompt-actions">
+                        <a href="welcome.html" class="btn btn-primary">Login / Sign Up</a>
+                        <button class="btn btn-ghost" onclick="this.parentElement.parentElement.parentElement.remove()">Maybe Later</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (modal.parentElement) {
+                modal.remove();
+            }
+        }, 5000);
     }
 
     // Save user to localStorage
@@ -47,11 +92,26 @@ class CommonUtils {
 
     // Update header with user info
     updateHeader() {
-        if (!this.currentUser) return;
-
-        const userDisplayName = document.getElementById('userDisplayName');
-        if (userDisplayName) {
-            userDisplayName.textContent = this.currentUser.username || 'User';
+        const headerActions = document.getElementById('headerActions');
+        if (headerActions) {
+            if (this.currentUser) {
+                // User is logged in - show settings and logout
+                headerActions.innerHTML = `
+                    <button class="btn btn-ghost" onclick="openSettings()">
+                        <span class="icon">⚙️</span> Settings
+                    </button>
+                    <button class="btn btn-ghost" onclick="logout()">
+                        <span class="icon">🚪</span> Logout
+                    </button>
+                `;
+            } else {
+                // User is not logged in - show login button
+                headerActions.innerHTML = `
+                    <a href="welcome.html" class="btn btn-primary">
+                        <span class="icon">🔑</span> Login / Sign Up
+                    </a>
+                `;
+            }
         }
 
         // Highlight active nav tab based on current page
@@ -105,7 +165,7 @@ class CommonUtils {
     // Logout function
     logout() {
         localStorage.removeItem('planeetUser');
-        window.location.href = 'index.html';
+        window.location.href = 'plan.html';
     }
 
     // Open settings modal
