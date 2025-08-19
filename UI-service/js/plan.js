@@ -8,13 +8,14 @@ class PlanPageController {
     }
 
     async init() {
-        // Load user and redirect if not authenticated
-        this.currentUser = commonUtils.getCurrentUserOrRedirect();
-        if (!this.currentUser) return;
-
+        // Load user data without requiring authentication
+        this.currentUser = commonUtils.getCurrentUser();
+        
         // Load components
         await commonUtils.loadHeader();
-        await commonUtils.loadSettingsModal();
+        if (this.currentUser) {
+            await commonUtils.loadSettingsModal();
+        }
         
         // Load planning modal
         await this.loadPlanningModal();
@@ -77,6 +78,13 @@ class PlanPageController {
 
     openPlanningForm() {
         console.log('🔍 openPlanningForm() called');
+        
+        // Check if user is authenticated
+        if (!this.currentUser) {
+            commonUtils.showLoginPrompt('planning an outing');
+            return;
+        }
+        
         const modal = document.getElementById('planningModal');
         console.log('🔍 Modal element found:', modal);
         
