@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plan New Outing - Planeet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+</head>
+<body>
+  <div class="dashboard-page">
+    <!-- Header will be loaded here -->
+    <header id="appHeader"></header>
+
+    <!-- Content -->
+    <div class="dashboard-content">
+      <h2 class="section-title">Plan Your Next Adventure</h2>
+      <p class="section-subtitle">Create a new outing plan and discover amazing experiences</p>
+      
+      <div class="planning-card">
+        <div class="planning-steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Choose Location & Date</h3>
+              <p>Pick your destination and when you want to go</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Select Activity Type</h3>
+              <p>Tell us what kind of experience you're looking for</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Add Preferences</h3>
+              <p>Share your preferences and special requirements</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="planning-action">
+          <button class="btn btn-primary" onclick="openPlanningForm()">
+            <span class="icon">🚀</span> Start Planning
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Planning Modal will be loaded here -->
+  <div id="planningModalMount"></div>
+
+  <!-- Settings Modal will be loaded here -->
+  <div id="settingsModalMount"></div>
+
+  <!-- Scripts -->
+  <script src="js/common.js"></script>
+  <script src="js/plan.js"></script>
+</body>
+</html>

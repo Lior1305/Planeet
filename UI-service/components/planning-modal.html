@@ -1,0 +1,211 @@
+<!-- Planning Modal Component -->
+<div id="planningModal" class="planning-modal">
+  <div class="planning-content">
+    <div class="planning-header">
+      <h2 class="planning-title">Create New Outing Plan</h2>
+      <button class="close-btn" onclick="closePlanningForm()">×</button>
+    </div>
+    
+    <!-- Progress Indicator -->
+    <div class="progress-indicator">
+      <div class="progress-step active" data-step="1">1</div>
+      <div class="progress-step" data-step="2">2</div>
+      <div class="progress-step" data-step="3">3</div>
+      <div class="progress-step" data-step="4">4</div>
+      <div class="progress-step" data-step="5">5</div>
+      <div class="progress-step" data-step="6">6</div>
+    </div>
+    
+    <form id="planningForm" class="planning-form">
+      <!-- Step 1: Basic Information -->
+      <div class="form-step active" data-step="1">
+        <div class="form-section">
+          <h3>Basic Information</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="planName">Plan Name *</label>
+              <input class="input-field" id="planName" type="text" placeholder="e.g., Weekend in Tel Aviv" required />
+            </div>
+            <div class="form-group">
+              <label for="groupSize">Group Size *</label>
+              <input class="input-field" id="groupSize" type="number" min="1" max="20" placeholder="2" required />
+            </div>
+          </div>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Location -->
+      <div class="form-step" data-step="2">
+        <div class="form-section">
+          <h3>Location</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="city">City *</label>
+              <input class="input-field" id="city" type="text" placeholder="e.g., Tel Aviv" required />
+            </div>
+            <div class="form-group">
+              <label for="address">Address (Optional)</label>
+              <input class="input-field" id="address" type="text" placeholder="e.g., Rothschild Blvd" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="latitude">Latitude</label>
+              <input class="input-field" id="latitude" type="number" step="0.000001" placeholder="32.0853" />
+            </div>
+            <div class="form-group">
+              <label for="longitude">Longitude</label>
+              <input class="input-field" id="longitude" type="number" step="0.000001" placeholder="34.7818" />
+            </div>
+          </div>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevStep()">Previous</button>
+          <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Date & Time -->
+      <div class="form-step" data-step="3">
+        <div class="form-section">
+          <h3>Date & Time</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="planDate">Date *</label>
+              <input class="input-field" id="planDate" type="date" required />
+            </div>
+            <div class="form-group">
+              <label for="planTime">Time *</label>
+              <input class="input-field" id="planTime" type="time" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="durationHours">Duration (Hours)</label>
+              <input class="input-field" id="durationHours" type="number" min="0.5" max="24" step="0.5" placeholder="3" />
+            </div>
+          </div>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevStep()">Previous</button>
+          <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Venue Types -->
+      <div class="form-step" data-step="4">
+        <div class="form-section">
+          <h3>Venue Types *</h3>
+          <div class="venue-types-grid">
+            <label class="checkbox-label">
+              <input type="checkbox" name="venueTypes" value="restaurant" />
+              <span class="checkmark">🍽️ Restaurant</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="venueTypes" value="cafe" />
+              <span class="checkmark">☕ Cafe</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="venueTypes" value="bar" />
+              <span class="checkmark">🍺 Bar</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="venueTypes" value="museum" />
+              <span class="checkmark">🏛️ Museum</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="venueTypes" value="theater" />
+              <span class="checkmark">🎭 Theater</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="venueTypes" value="park" />
+              <span class="checkmark">🌳 Park</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="venueTypes" value="shopping_center" />
+              <span class="checkmark">🛍️ Shopping Center</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="venueTypes" value="sports_facility" />
+              <span class="checkmark">🏃 Sports Facility</span>
+            </label>
+          </div>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevStep()">Previous</button>
+          <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Preferences -->
+      <div class="form-step" data-step="5">
+        <div class="form-section">
+          <h3>Preferences</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="budgetRange">Budget Range</label>
+              <select class="input-field" id="budgetRange">
+                <option value="">Any Budget</option>
+                <option value="$">$ - Inexpensive</option>
+                <option value="$$">$$ - Moderate</option>
+                <option value="$$$">$$$ - Expensive</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="minRating">Minimum Rating</label>
+              <select class="input-field" id="minRating">
+                <option value="">Any Rating</option>
+                <option value="3.0">3.0+ Stars</option>
+                <option value="3.5">3.5+ Stars</option>
+                <option value="4.0">4.0+ Stars</option>
+                <option value="4.5">4.5+ Stars</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="radiusKm">Search Radius (km)</label>
+              <input class="input-field" id="radiusKm" type="number" min="0.5" max="50" step="0.5" value="5" />
+            </div>
+            <div class="form-group">
+              <label for="maxVenues">Max Venues</label>
+              <input class="input-field" id="maxVenues" type="number" min="1" max="20" value="5" />
+            </div>
+          </div>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevStep()">Previous</button>
+          <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 6: Special Requirements -->
+      <div class="form-step" data-step="6">
+        <div class="form-section">
+          <h3>Special Requirements</h3>
+          <div class="form-group">
+            <label for="dietaryRestrictions">Dietary Restrictions</label>
+            <input class="input-field" id="dietaryRestrictions" type="text" placeholder="e.g., vegetarian, gluten-free" />
+          </div>
+          <div class="form-group">
+            <label for="accessibilityNeeds">Accessibility Needs</label>
+            <input class="input-field" id="accessibilityNeeds" type="text" placeholder="e.g., wheelchair accessible" />
+          </div>
+          <div class="form-group">
+            <label for="amenities">Required Amenities</label>
+            <input class="input-field" id="amenities" type="text" placeholder="e.g., wifi, parking, outdoor seating" />
+          </div>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevStep()">Previous</button>
+          <button type="submit" class="btn btn-primary">
+            <span class="icon">🚀</span> Create Plan
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

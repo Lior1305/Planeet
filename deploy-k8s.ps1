@@ -53,10 +53,40 @@ try {
 }
 finally {
     Write-Host "Stopping port forwarding..." -ForegroundColor Red
-    Stop-Job $userJob, $outingJob, $mongoJob, $uiJob, $planningJob, $venuesJob -ErrorAction SilentlyContinue
-    Remove-Job $userJob, $outingJob, $mongoJob, $uiJob, $planningJob, $venuesJob -ErrorAction SilentlyContinue
-    Write-Host "Port forwarding stopped." -ForegroundColor Green
-} 
+    
+    # Immediate aggressive shutdown
+    $jobs = @($userJob, $outingJob, $mongoJob, $uiJob, $planningJob, $venuesJob)
+    
+    # Force kill all kubectl processes immediately
+    Write-Host "Force killing kubectl processes..." -ForegroundColor Yellow
+    Get-Process | Where-Object { $_.ProcessName -like "*kubectl*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    
+    # Stop all jobs with force
+    Write-Host "Force stopping jobs..." -ForegroundColor Yellow
+    Stop-Job $jobs -Force -ErrorAction SilentlyContinue
+    
+    # Wait max 1 second for cleanup
+    $timeout = 1
+    $elapsed = 0
+    
+    while ($elapsed -lt $timeout) {
+        $runningJobs = Get-Job -State Running | Where-Object { $jobs -contains $_ }
+        if ($runningJobs.Count -eq 0) {
+            break
+        }
+        Start-Sleep -Milliseconds 100
+        $elapsed += 0.1
+    }
+    
+    # Final cleanup - remove all jobs regardless of state
+    Write-Host "Cleaning up jobs..." -ForegroundColor Yellow
+    Remove-Job $jobs -Force -ErrorAction SilentlyContinue
+    
+    # Kill any remaining processes that might be hanging
+    Get-Process | Where-Object { $_.ProcessName -like "*kubectl*" -or $_.ProcessName -like "*port-forward*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    
+    Write-Host "Port forwarding stopped in $([math]::Round($elapsed, 1)) seconds." -ForegroundColor Green
+}
 
 
 ### On powershell run this : .\deploy-k8s.ps1

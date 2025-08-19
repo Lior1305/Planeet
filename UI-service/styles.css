@@ -898,7 +898,9 @@ textarea.input-field {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   transform: translateY(-20px);
   transition: transform 0.3s ease;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .planning-modal.active .planning-content {
@@ -916,6 +918,7 @@ textarea.input-field {
   position: sticky;
   top: 0;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .planning-title {
@@ -927,6 +930,9 @@ textarea.input-field {
 /* Planning Form */
 .planning-form {
   padding: 32px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .form-section {
@@ -1050,4 +1056,212 @@ textarea.input-field {
   .form-actions {
     flex-direction: column;
   }
+} 
+
+/* Progress Indicator */
+.progress-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 2rem 0;
+  padding: 1rem 0;
+  gap: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  position: relative;
+  z-index: 5;
+}
+
+.progress-step {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: #e1e5e9;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active {
+  background: #007bff;
+  color: white;
+  transform: scale(1.1);
+}
+
+.progress-step.completed {
+  background: #28a745;
+  color: white;
+}
+
+/* Step Actions */
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e1e5e9;
+  background: white;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.step-actions .btn {
+  min-width: 120px;
+  margin: 0 0.5rem;
+}
+
+.step-actions .btn:first-child {
+  margin-left: 0;
+}
+
+.step-actions .btn:last-child {
+  margin-right: 0;
+}
+
+/* Form Steps */
+.form-step {
+  display: none;
+}
+
+.form-step.active {
+  display: block;
+  animation: fadeInSlide 0.3s ease-out;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Outing Items */
+.outing-item {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e5e9;
+}
+
+.outing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.outing-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+}
+
+.outing-date {
+  color: #6c757d;
+  font-size: 0.875rem;
+  background: #f8f9fa;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+}
+
+.outing-details {
+  margin-bottom: 1.5rem;
+}
+
+.outing-details p {
+  margin: 0.5rem 0;
+  color: #495057;
+}
+
+.outing-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+/* No Outings State */
+.no-outings {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e5e9;
+}
+
+.no-outings .icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.no-outings h3 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+}
+
+.no-outings p {
+  margin: 0 0 1.5rem 0;
+  color: #6c757d;
+  font-size: 1rem;
+} 
+
+/* Hub Cards */
+.hub-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.hub-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e5e9;
+  transition: all 0.3s ease;
+}
+
+.hub-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.hub-card-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.hub-card h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.hub-card p {
+  margin: 0 0 1.5rem 0;
+  color: #6c757d;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.hub-card .btn {
+  width: 100%;
+  justify-content: center;
 } 

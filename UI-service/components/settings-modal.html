@@ -1,0 +1,32 @@
+<!-- Settings Modal Component -->
+<div id="settingsModal" class="settings-modal">
+  <div class="settings-content">
+    <div class="settings-header">
+      <h2 class="settings-title">Account Settings</h2>
+      <button class="close-btn" onclick="closeSettings()">×</button>
+    </div>
+    
+    <div class="form-container">
+      <div class="form-group">
+        <label>Username</label>
+        <input class="input-field" id="settingsUsername" type="text" placeholder="Username" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input class="input-field" id="settingsEmail" type="email" placeholder="Email" />
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input class="input-field" id="settingsPhone" type="tel" placeholder="Phone Number" />
+      </div>
+      <div class="form-group">
+        <label>New Password (leave blank to keep current)</label>
+        <input class="input-field" id="settingsPassword" type="password" placeholder="New Password" />
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="saveSettings()">Save Changes</button>
+        <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
