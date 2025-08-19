@@ -35,8 +35,13 @@ async def create_plan(plan_request: PlanRequest):
         # Store the plan request
         plan_requests_store[plan_id] = plan_request.dict()
         
+        # Convert datetime objects to ISO strings for JSON serialization
+        plan_data = plan_request.dict()
+        if plan_data.get('date'):
+            plan_data['date'] = plan_data['date'].isoformat()
+        
         # Send to Venues Service for plan generation
-        venues_plan_response = await venues_service_client.generate_venue_plan(plan_request.dict())
+        venues_plan_response = await venues_service_client.generate_venue_plan(plan_data)
         
         if venues_plan_response:
             # Store the complete plan

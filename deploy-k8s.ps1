@@ -8,6 +8,8 @@ kubectl wait --for=condition=ready pod -l app=outing-profile-service --timeout=1
 kubectl wait --for=condition=ready pod -l app=users-service --timeout=120s
 kubectl wait --for=condition=ready pod -l app=mongo --timeout=120s
 kubectl wait --for=condition=ready pod -l app=ui-service --timeout=120s
+kubectl wait --for=condition=ready pod -l app=planning-service --timeout=120s
+kubectl wait --for=condition=ready pod -l app=venues-service --timeout=120s
 
 Write-Host "All pods are ready!" -ForegroundColor Green
 
@@ -26,12 +28,20 @@ $mongoJob = Start-Job -ScriptBlock { kubectl port-forward svc/mongo 27017:27017 
 Write-Host "Forwarding ui-service (3000:80)..." -ForegroundColor Blue
 $uiJob = Start-Job -ScriptBlock { kubectl port-forward svc/ui-service 3000:80 }
 
+Write-Host "Forwarding planning-service (8001:8001)..." -ForegroundColor Blue
+$planningJob = Start-Job -ScriptBlock { kubectl port-forward svc/planning-service 8001:8001 }
+
+Write-Host "Forwarding venues-service (8000:8000)..." -ForegroundColor Blue
+$venuesJob = Start-Job -ScriptBlock { kubectl port-forward svc/venues-service 8000:8000 }
+
 Write-Host ""
 Write-Host "All services are now accessible:" -ForegroundColor Green
 Write-Host "   UI Service:            http://localhost:3000" -ForegroundColor White
 Write-Host "   Users Service:        http://localhost:8080" -ForegroundColor White
 Write-Host "   Outing Profile Service: http://localhost:5000" -ForegroundColor White
 Write-Host "   MongoDB:              localhost:27017" -ForegroundColor White
+Write-Host "   Planning Service:     http://localhost:8001" -ForegroundColor White
+Write-Host "   Venues Service:       http://localhost:8000" -ForegroundColor White
 Write-Host ""
 Write-Host "Press Ctrl+C to stop all port forwarding" -ForegroundColor Yellow
 
@@ -43,8 +53,8 @@ try {
 }
 finally {
     Write-Host "Stopping port forwarding..." -ForegroundColor Red
-    Stop-Job $userJob, $outingJob, $mongoJob, $uiJob -ErrorAction SilentlyContinue
-    Remove-Job $userJob, $outingJob, $mongoJob, $uiJob -ErrorAction SilentlyContinue
+    Stop-Job $userJob, $outingJob, $mongoJob, $uiJob, $planningJob, $venuesJob -ErrorAction SilentlyContinue
+    Remove-Job $userJob, $outingJob, $mongoJob, $uiJob, $planningJob, $venuesJob -ErrorAction SilentlyContinue
     Write-Host "Port forwarding stopped." -ForegroundColor Green
 } 
 

@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Planeet Dashboard</title>
+  <title>Test Planning Integration</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2.0">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="dashboard-page">
@@ -13,159 +13,15 @@
     <div class="dashboard-header">
       <div class="header-left">
         <img src="images/planeet-small.png" class="header-logo" alt="Planeet logo">
-        <h1 class="dashboard-title">Welcome back, <span id="userDisplayName">User</span>!</h1>
-      </div>
-      <div class="header-right">
-        <button class="btn btn-secondary" onclick="openSettings()">
-          <span class="icon">⚙️</span> Settings
-        </button>
-        <button class="btn btn-secondary" onclick="logout()">
-          <span class="icon">🚪</span> Logout
-        </button>
+        <h1 class="dashboard-title">Test Planning Integration</h1>
       </div>
     </div>
 
-    <!-- Navigation -->
-    <div class="dashboard-nav">
-      <button class="nav-tab active" onclick="switchTab('plan')">
-        <span class="icon">📅</span> Plan New Meeting
+    <!-- Test Button -->
+    <div style="padding: 50px; text-align: center;">
+      <button class="btn btn-primary" onclick="openPlanningForm()">
+        <span class="icon">🚀</span> Test Planning Form
       </button>
-      <button class="nav-tab" onclick="switchTab('profile')">
-        <span class="icon">👤</span> My Profile
-      </button>
-      <button class="nav-tab" onclick="switchTab('history')">
-        <span class="icon">📋</span> Previous Outings
-      </button>
-    </div>
-
-    <!-- Content -->
-    <div class="dashboard-content">
-      <!-- Plan New Meeting Tab -->
-      <div id="plan-tab" class="tab-pane active">
-        <h2 class="section-title">Plan Your Next Adventure</h2>
-        <p class="section-subtitle">Create a new outing plan and discover amazing experiences</p>
-        
-        <div class="planning-card">
-          <div class="planning-steps">
-            <div class="step">
-              <div class="step-number">1</div>
-              <div class="step-content">
-                <h3>Choose Location & Date</h3>
-                <p>Pick your destination and when you want to go</p>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-number">2</div>
-              <div class="step-content">
-                <h3>Select Activity Type</h3>
-                <p>Tell us what kind of experience you're looking for</p>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-number">3</div>
-              <div class="step-content">
-                <h3>Add Preferences</h3>
-                <p>Share your preferences and special requirements</p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="planning-action">
-            <button class="btn btn-primary" onclick="openPlanningForm()">
-              <span class="icon">🚀</span> Start Planning
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- My Profile Tab -->
-      <div id="profile-tab" class="tab-pane">
-        <h2 class="section-title">My Profile</h2>
-        
-        <div class="profile-card">
-          <div class="profile-header">
-            <div class="profile-avatar">
-              <span class="avatar-text" id="profileInitials">U</span>
-            </div>
-            <div class="profile-info">
-              <h3 id="profileName">User Name</h3>
-              <p id="profileEmail">user@example.com</p>
-              <p id="profilePhone">+972 50-123-4567</p>
-            </div>
-          </div>
-          
-          <div class="profile-stats">
-            <div class="stat-item">
-              <div class="stat-number" id="totalOutings">0</div>
-              <div class="stat-label">Total Outings</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number" id="favoriteCity">-</div>
-              <div class="stat-label">Favorite City</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number" id="memberSince">2024</div>
-              <div class="stat-label">Member Since</div>
-            </div>
-          </div>
-          
-          <div class="profile-actions">
-            <button class="btn btn-secondary" onclick="openSettings()">
-              <span class="icon">✏️</span> Edit Profile
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Previous Outings Tab -->
-      <div id="history-tab" class="tab-pane">
-        <h2 class="section-title">Previous Outings</h2>
-        
-        <div class="outings-list" id="outingsList">
-          <!-- Outings will be populated here -->
-          <div class="no-outings">
-            <span class="icon">📋</span>
-            <h3>No outings yet</h3>
-            <p>Start planning your first adventure!</p>
-            <button class="btn btn-primary" onclick="switchTab('plan')">
-              Plan Your First Outing
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Settings Modal -->
-  <div id="settingsModal" class="settings-modal">
-    <div class="settings-content">
-      <div class="settings-header">
-        <h2 class="settings-title">Account Settings</h2>
-        <button class="close-btn" onclick="closeSettings()">×</button>
-      </div>
-      
-      <div class="form-container">
-        <div class="form-group">
-          <label>Username</label>
-          <input class="input-field" id="settingsUsername" type="text" placeholder="Username" />
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input class="input-field" id="settingsEmail" type="email" placeholder="Email" />
-        </div>
-        <div class="form-group">
-          <label>Phone Number</label>
-          <input class="input-field" id="settingsPhone" type="tel" placeholder="Phone Number" />
-        </div>
-        <div class="form-group">
-          <label>New Password (leave blank to keep current)</label>
-          <input class="input-field" id="settingsPassword" type="password" placeholder="New Password" />
-        </div>
-        <div class="btn-row">
-          <button class="btn" onclick="saveSettings()">Save Changes</button>
-          <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -344,6 +200,182 @@
     </div>
   </div>
 
-  <script src="js/dashboard.js"></script>
+  <script>
+    // Mock user data for testing
+    const mockUser = {
+      id: 'test_user_123',
+      username: 'Test User',
+      email: 'test@example.com'
+    };
+
+    // Simple planning form handler for testing
+    function openPlanningForm() {
+      const modal = document.getElementById('planningModal');
+      if (modal) {
+        modal.classList.add('active');
+        setupPlanningForm();
+      }
+    }
+
+    function closePlanningForm() {
+      const modal = document.getElementById('planningModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+    }
+
+    function setupPlanningForm() {
+      // Set default date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dateInput = document.getElementById('planDate');
+      if (dateInput) {
+        dateInput.value = tomorrow.toISOString().split('T')[0];
+      }
+
+      // Set default time to current time + 1 hour
+      const timeInput = document.getElementById('planTime');
+      if (timeInput) {
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        timeInput.value = now.toTimeString().slice(0, 5);
+      }
+
+      // Add form submit handler
+      const form = document.getElementById('planningForm');
+      if (form) {
+        form.onsubmit = handlePlanningFormSubmit;
+      }
+
+      // Add city input handler for geocoding
+      const cityInput = document.getElementById('city');
+      if (cityInput) {
+        cityInput.addEventListener('blur', () => handleCityInput(cityInput.value));
+      }
+    }
+
+    async function handlePlanningFormSubmit(event) {
+      event.preventDefault();
+      
+      try {
+        // Show loading state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="icon">⏳</span> Creating Plan...';
+        submitBtn.disabled = true;
+
+        // Collect form data
+        const formData = collectPlanningFormData();
+        
+        // Validate form data
+        if (!validatePlanningFormData(formData)) {
+          return;
+        }
+
+        // Show success message (for testing)
+        alert(`Plan data collected successfully!\n\nPlan Name: ${formData.planName}\nCity: ${formData.city}\nVenue Types: ${formData.venueTypes.join(', ')}\nGroup Size: ${formData.groupSize}`);
+        
+        // Close modal
+        closePlanningForm();
+        
+      } catch (error) {
+        console.error('Error creating plan:', error);
+        alert('Failed to create plan. Please try again.');
+      } finally {
+        // Reset button state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    }
+
+    function collectPlanningFormData() {
+      // Get selected venue types
+      const venueTypeCheckboxes = document.querySelectorAll('input[name="venueTypes"]:checked');
+      const venueTypes = Array.from(venueTypeCheckboxes).map(cb => cb.value);
+
+      // Get form values
+      const formData = {
+        planName: document.getElementById('planName').value,
+        groupSize: parseInt(document.getElementById('groupSize').value),
+        city: document.getElementById('city').value,
+        address: document.getElementById('address').value,
+        latitude: parseFloat(document.getElementById('latitude').value) || null,
+        longitude: parseFloat(document.getElementById('longitude').value) || null,
+        planDate: document.getElementById('planDate').value,
+        planTime: document.getElementById('planTime').value,
+        durationHours: parseFloat(document.getElementById('durationHours').value) || null,
+        venueTypes: venueTypes,
+        budgetRange: document.getElementById('budgetRange').value || null,
+        minRating: parseFloat(document.getElementById('minRating').value) || null,
+        radiusKm: parseFloat(document.getElementById('radiusKm').value),
+        maxVenues: parseInt(document.getElementById('maxVenues').value),
+        dietaryRestrictions: document.getElementById('dietaryRestrictions').value || null,
+        accessibilityNeeds: document.getElementById('accessibilityNeeds').value || null,
+        amenities: document.getElementById('amenities').value || null
+      };
+
+      return formData;
+    }
+
+    function validatePlanningFormData(formData) {
+      // Check required fields
+      if (!formData.planName.trim()) {
+        alert('Please enter a plan name.');
+        return false;
+      }
+
+      if (!formData.city.trim()) {
+        alert('Please enter a city.');
+        return false;
+      }
+
+      if (formData.venueTypes.length === 0) {
+        alert('Please select at least one venue type.');
+        return false;
+      }
+
+      if (formData.groupSize < 1) {
+        alert('Group size must be at least 1.');
+        return false;
+      }
+
+      return true;
+    }
+
+    async function handleCityInput(cityName) {
+      if (!cityName.trim()) return;
+
+      try {
+        // Try to get coordinates for the city
+        const coordinates = await geocodeCity(cityName);
+        if (coordinates) {
+          document.getElementById('latitude').value = coordinates.lat;
+          document.getElementById('longitude').value = coordinates.lng;
+        }
+      } catch (error) {
+        console.log('Could not geocode city:', cityName);
+      }
+    }
+
+    async function geocodeCity(cityName) {
+      // Simple geocoding for common Israeli cities
+      const cityCoordinates = {
+        'tel aviv': { lat: 32.0853, lng: 34.7818 },
+        'jerusalem': { lat: 31.7683, lng: 35.2137 },
+        'haifa': { lat: 32.7940, lng: 34.9896 },
+        'beer sheva': { lat: 31.2518, lng: 34.7913 },
+        'eilat': { lat: 29.5577, lng: 34.9519 },
+        'netanya': { lat: 32.3328, lng: 34.8600 },
+        'ashdod': { lat: 31.8044, lng: 34.6500 },
+        'rishon lezion': { lat: 31.9600, lng: 34.8000 },
+        'petah tikva': { lat: 32.0853, lng: 34.8860 },
+        'holon': { lat: 32.0167, lng: 34.7792 }
+      };
+
+      const normalizedCity = cityName.toLowerCase().trim();
+      return cityCoordinates[normalizedCity] || null;
+    }
+  </script>
 </body>
 </html> 
