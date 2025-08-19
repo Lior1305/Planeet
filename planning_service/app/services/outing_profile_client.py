@@ -5,14 +5,15 @@ Client service for Planning Service to communicate with Outing-Profile-Service
 import httpx
 from typing import Optional, Dict, Any
 import logging
+from app.core.config import OUTING_PROFILE_SERVICE_URL
 
 logger = logging.getLogger(__name__)
 
 class OutingProfileClient:
     """Client for communicating with the Outing-Profile-Service"""
     
-    def __init__(self, outing_profile_service_url: str = "http://localhost:8002"):
-        self.outing_profile_service_url = outing_profile_service_url
+    def __init__(self, outing_profile_service_url: str = None):
+        self.outing_profile_service_url = outing_profile_service_url or OUTING_PROFILE_SERVICE_URL
         self.client = httpx.AsyncClient(timeout=30.0)
     
     async def get_user_preferences(self, user_id: str) -> Optional[Dict[str, Any]]:

@@ -5,14 +5,15 @@ Client service for Planning Service to communicate with Venues Service
 import httpx
 from typing import Optional, Dict, Any
 import logging
+from app.core.config import VENUES_SERVICE_URL
 
 logger = logging.getLogger(__name__)
 
 class VenuesServiceClient:
     """Client for communicating with the Venues Service"""
     
-    def __init__(self, venues_service_url: str = "http://localhost:8000"):
-        self.venues_service_url = venues_service_url
+    def __init__(self, venues_service_url: str = None):
+        self.venues_service_url = venues_service_url or VENUES_SERVICE_URL
         self.client = httpx.AsyncClient(timeout=60.0)  # Longer timeout for plan generation
     
     async def generate_venue_plan(self, plan_request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
