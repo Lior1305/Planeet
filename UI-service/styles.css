@@ -227,6 +227,22 @@ p { font-size: 18px; }
   text-decoration: none;
 }
 
+.logo img {
+  height: 48px;
+  width: auto;
+  transition: transform 0.3s ease;
+}
+
+.logo:hover img {
+  transform: scale(1.05);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
 .nav {
   display: flex;
   gap: 8px;
@@ -3337,7 +3353,7 @@ textarea.input-field {
 }
 
 .header-logo {
-  width: 40px;
+  width: 48px;
   height: auto;
 }
 
@@ -3498,6 +3514,32 @@ textarea.input-field {
     width: 95%;
     padding: 24px;
   }
+  
+  /* Header responsive styles */
+  .header-content {
+    flex-direction: column;
+    gap: 16px;
+    padding: 12px 0;
+  }
+  
+  .header-right {
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+  
+  .nav {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .header-actions {
+    justify-content: center;
+  }
+  
+  .logo img {
+    height: 40px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -3516,6 +3558,25 @@ textarea.input-field {
   
   .dashboard-content {
     padding: 16px;
+  }
+  
+  /* Header responsive styles for small mobile */
+  .header-content {
+    padding: 8px 0;
+  }
+  
+  .logo img {
+    height: 36px;
+  }
+  
+  .nav-link {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .header-actions .btn {
+    padding: 8px 12px;
+    font-size: 14px;
   }
 }
 

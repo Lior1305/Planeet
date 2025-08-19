@@ -109,7 +109,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:v2.0.7
+          image: nikaklimenchuk/planeet-ui:v2.0.8
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -134,7 +134,8 @@ spec:
       protocol: TCP
       port: 80
       targetPort: 80
-  type: ClusterIP
+      nodePort: 30000
+  type: NodePort
 
 ---
 apiVersion: apps/v1
