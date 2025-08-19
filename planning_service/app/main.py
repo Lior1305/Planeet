@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1.routes import router as v1_router
+from app.api.routes import router as v1_router
 
 app = FastAPI(title="Planning Service")
 

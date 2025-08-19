@@ -184,3 +184,101 @@ spec:
       port: 80
       targetPort: 8080
   type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: planning-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: planning-service
+  template:
+    metadata:
+      labels:
+        app: planning-service
+    spec:
+      containers:
+        - name: planning-service
+          image: dartoledano/planning-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8001
+          env:
+            - name: VENUES_SERVICE_URL
+              value: http://venues-service:8000
+            - name: OUTING_PROFILE_SERVICE_URL
+              value: http://outing-profile-service:80
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: planning-service
+spec:
+  selector:
+    app: planning-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: venues-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: venues-service
+  template:
+    metadata:
+      labels:
+        app: venues-service
+    spec:
+      containers:
+        - name: venues-service
+          image: dartoledano/venues-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: GOOGLE_PLACES_API_KEY
+              value: "AIzaSyCPVz2SxWPbfrilbZ2wo8KcSlBNa8uPYPM"
+            - name: PLANNING_SERVICE_URL
+              value: http://planning-service:8001
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: venues-service
+spec:
+  selector:
+    app: venues-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
