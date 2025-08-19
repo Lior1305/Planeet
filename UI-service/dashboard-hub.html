@@ -4,42 +4,48 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Planeet Dashboard Hub</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=2.0">
 </head>
 <body>
-  <div class="dashboard-page">
+  <div class="page-wrapper">
     <!-- Header will be loaded here -->
     <header id="appHeader"></header>
 
-    <!-- Content -->
-    <div class="dashboard-content">
-      <h2 class="section-title">Welcome to Planeet</h2>
-      <p class="section-subtitle">Choose what you'd like to do today</p>
-      
-      <div class="hub-cards">
-        <div class="hub-card">
-          <div class="hub-card-icon">📅</div>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-eyebrow">Welcome to Planeet</div>
+        <h1>Your Adventure Hub</h1>
+        <p>Choose what you'd like to do today and start planning amazing experiences with friends.</p>
+      </div>
+    </section>
+
+    <!-- Hub Cards -->
+    <section class="container" style="padding: 60px 0;">
+      <div class="feature-grid">
+        <article class="feature-card fc-1">
+          <div class="fc-icon">📅</div>
           <h3>Plan New Outing</h3>
           <p>Create a new adventure plan with our multi-step wizard</p>
           <a href="plan.html" class="btn btn-primary">Start Planning</a>
-        </div>
+        </article>
         
-        <div class="hub-card">
-          <div class="hub-card-icon">👤</div>
+        <article class="feature-card fc-2">
+          <div class="fc-icon">👤</div>
           <h3>My Profile</h3>
           <p>View and edit your profile information and settings</p>
           <a href="profile.html" class="btn btn-secondary">View Profile</a>
-        </div>
+        </article>
         
-        <div class="hub-card">
-          <div class="hub-card-icon">📋</div>
+        <article class="feature-card fc-3">
+          <div class="fc-icon">📋</div>
           <h3>Previous Outings</h3>
           <p>Browse your past adventures and plans</p>
           <a href="history.html" class="btn btn-secondary">View History</a>
-        </div>
+        </article>
       </div>
-    </div>
+    </section>
   </div>
 
   <!-- Settings Modal will be loaded here -->
