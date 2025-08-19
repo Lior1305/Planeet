@@ -88,6 +88,7 @@ public class UserService {
                     case "username" -> user.setUsername((String) value);
                     case "email" -> user.setEmail((String) value);
                     case "password" -> user.setPassword((String) value);
+                    case "cellphoneNumber" -> user.setCellphoneNumber((String) value);
                 }
             });
             return userRepository.save(user);
