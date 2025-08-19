@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile - Planeet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=2.0">
+</head>
+<body>
+  <div class="dashboard-page">
+    <!-- Header will be loaded here -->
+    <header id="appHeader"></header>
+
+    <!-- Content -->
+    <div class="dashboard-content">
+      <h2 class="section-title">My Profile</h2>
+      
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="profile-avatar">
+            <span class="avatar-text" id="profileInitials">U</span>
+          </div>
+          <div class="profile-info">
+            <h3 id="profileName">User Name</h3>
+            <p id="profileEmail">user@example.com</p>
+            <p id="profilePhone">+972 50-123-4567</p>
+          </div>
+        </div>
+        
+        <div class="profile-stats">
+          <div class="stat-item">
+            <div class="stat-number" id="totalOutings">0</div>
+            <div class="stat-label">Total Outings</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="favoriteCity">-</div>
+            <div class="stat-label">Favorite City</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="memberSince">2024</div>
+            <div class="stat-label">Member Since</div>
+          </div>
+        </div>
+        
+        <div class="profile-actions">
+          <button class="btn btn-secondary" onclick="openSettings()">
+            <span class="icon">✏️</span> Edit Profile
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal will be loaded here -->
+  <div id="settingsModalMount"></div>
+
+  <!-- Scripts -->
+  <script src="js/common.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>

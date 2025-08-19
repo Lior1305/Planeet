@@ -128,7 +128,7 @@ class PlaneetApp {
     }
 
     redirectToDashboard() {
-        console.log('Redirecting to dashboard...');
+        console.log('Redirecting to plan page...');
         console.log('Current user:', this.currentUser);
         
         // Save user data to localStorage
@@ -141,23 +141,23 @@ class PlaneetApp {
         
         // Check if we're on the root path (localhost:3000)
         if (window.location.pathname === '/' || window.location.pathname === '') {
-            console.log('On root path, redirecting to dashboard.html');
-            window.location.href = 'dashboard.html';
+            console.log('On root path, redirecting to plan.html');
+            window.location.href = 'plan.html';
         } else {
             // Get the base URL
             const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
             console.log('Base URL:', baseUrl);
             
-            const dashboardUrl = baseUrl + 'dashboard.html';
-            console.log('Dashboard URL:', dashboardUrl);
+            const planUrl = baseUrl + 'plan.html';
+            console.log('Plan URL:', planUrl);
             
             // Try the redirect
             try {
-                window.location.href = dashboardUrl;
+                window.location.href = planUrl;
             } catch (error) {
                 console.error('Redirect error:', error);
                 // Fallback
-                window.location.replace(dashboardUrl);
+                window.location.replace(planUrl);
             }
         }
     }
@@ -175,15 +175,15 @@ class PlaneetApp {
         
         // Check if we're on the root path (localhost:3000)
         if (window.location.pathname === '/' || window.location.pathname === '') {
-            console.log('On root path, redirecting to dashboard.html');
-            window.location.href = 'dashboard.html';
+            console.log('On root path, redirecting to plan.html');
+            window.location.href = 'plan.html';
         } else {
             // Get the base URL
             const baseUrl = window.location.origin + window.location.pathname.replace('test-redirect.html', '');
-            const dashboardUrl = baseUrl + 'dashboard.html';
-            console.log('Attempting redirect to:', dashboardUrl);
+            const planUrl = baseUrl + 'plan.html';
+            console.log('Attempting redirect to:', planUrl);
             
-            window.location.href = dashboardUrl;
+            window.location.href = planUrl;
         }
     }
 }

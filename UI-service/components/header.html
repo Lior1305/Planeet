@@ -1,0 +1,28 @@
+<!-- Shared Header Component -->
+<div class="dashboard-header">
+  <div class="header-left">
+    <img src="images/planeet-small.png" class="header-logo" alt="Planeet logo">
+    <h1 class="dashboard-title">Welcome back, <span id="userDisplayName">User</span>!</h1>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-secondary" onclick="openSettings()">
+      <span class="icon">⚙️</span> Settings
+    </button>
+    <button class="btn btn-secondary" onclick="logout()">
+      <span class="icon">🚪</span> Logout
+    </button>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="dashboard-nav">
+  <a href="plan.html" class="nav-tab" id="nav-plan">
+    <span class="icon">📅</span> Plan New Meeting
+  </a>
+  <a href="profile.html" class="nav-tab" id="nav-profile">
+    <span class="icon">👤</span> My Profile
+  </a>
+  <a href="history.html" class="nav-tab" id="nav-history">
+    <span class="icon">📋</span> Previous Outings
+  </a>
+</div>

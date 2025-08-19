@@ -131,7 +131,7 @@ class WelcomeApp {
     }
 
     redirectToDashboard() {
-        console.log('=== REDIRECT TO DASHBOARD ===');
+        console.log('=== REDIRECT TO PLAN PAGE ===');
         console.log('Current user:', this.currentUser);
         console.log('Current URL:', window.location.href);
         console.log('Current pathname:', window.location.pathname);
@@ -140,21 +140,21 @@ class WelcomeApp {
         localStorage.setItem('planeetUser', JSON.stringify(this.currentUser));
         console.log('User data saved to localStorage');
         
-        // Force redirect to dashboard.html
-        const dashboardUrl = window.location.origin + '/dashboard.html';
-        console.log('Redirecting to:', dashboardUrl);
+        // Force redirect to plan.html
+        const planUrl = window.location.origin + '/plan.html';
+        console.log('Redirecting to:', planUrl);
         
         // Try multiple redirect methods
         try {
-            window.location.href = dashboardUrl;
+            window.location.href = planUrl;
         } catch (error) {
             console.error('Redirect error:', error);
             try {
-                window.location.replace(dashboardUrl);
+                window.location.replace(planUrl);
             } catch (error2) {
                 console.error('Replace error:', error2);
                 // Last resort - try relative path
-                window.location.href = 'dashboard.html';
+                window.location.href = 'plan.html';
             }
         }
     }
@@ -170,10 +170,10 @@ class WelcomeApp {
             phone: '+972 50-123-4567'
         }));
         
-        const dashboardUrl = window.location.origin + '/dashboard.html';
-        console.log('Test redirecting to:', dashboardUrl);
+        const planUrl = window.location.origin + '/plan.html';
+        console.log('Test redirecting to:', planUrl);
         
-        window.location.href = dashboardUrl;
+        window.location.href = planUrl;
     }
 }
 
