@@ -163,10 +163,22 @@ class DashboardApp {
     }
 
     openPlanningForm() {
+        console.log('🔍 openPlanningForm() called in DashboardApp class');
+        console.log('🔍 Looking for planningModal element...');
+        
         const modal = document.getElementById('planningModal');
+        console.log('🔍 Modal element found:', modal);
+        
         if (modal) {
+            console.log('🔍 Adding active class to modal');
             modal.classList.add('active');
+            console.log('🔍 Modal classes after adding active:', modal.className);
             this.setupPlanningForm();
+        } else {
+            console.error('❌ planningModal element not found!');
+            console.error('❌ Available elements with "planning" in ID:');
+            const allElements = document.querySelectorAll('[id*="planning"]');
+            allElements.forEach(el => console.log('   -', el.id, el.tagName));
         }
     }
 
@@ -194,6 +206,11 @@ class DashboardApp {
             timeInput.value = now.toTimeString().slice(0, 5);
         }
 
+        // Initialize multi-step form
+        this.currentStep = 1;
+        this.totalSteps = 6;
+        this.updateProgressIndicator();
+
         // Add form submit handler
         const form = document.getElementById('planningForm');
         if (form) {
@@ -205,6 +222,154 @@ class DashboardApp {
         if (cityInput) {
             cityInput.addEventListener('blur', () => this.handleCityInput(cityInput.value));
         }
+    }
+
+    updateProgressIndicator() {
+        const progressSteps = document.querySelectorAll('.progress-step');
+        progressSteps.forEach((step, index) => {
+            const stepNumber = index + 1;
+            step.classList.remove('active', 'completed');
+            
+            if (stepNumber === this.currentStep) {
+                step.classList.add('active');
+            } else if (stepNumber < this.currentStep) {
+                step.classList.add('completed');
+            }
+        });
+    }
+
+    showStep(stepNumber) {
+        console.log(`🔍 showStep(${stepNumber}) called`);
+        
+        // Hide all steps
+        const formSteps = document.querySelectorAll('.form-step');
+        console.log(`🔍 Found ${formSteps.length} form steps`);
+        formSteps.forEach(step => {
+            step.classList.remove('active');
+            console.log(`🔍 Step ${step.dataset.step}: removed active class`);
+        });
+        
+        // Show current step
+        const currentStepElement = document.querySelector(`[data-step="${stepNumber}"]`);
+        console.log(`🔍 Looking for step ${stepNumber}, found:`, currentStepElement);
+        
+        if (currentStepElement) {
+            currentStepElement.classList.add('active');
+            console.log(`🔍 Step ${stepNumber} now has active class`);
+        } else {
+            console.error(`❌ Could not find step element with data-step="${stepNumber}"`);
+            // Debug: show all available steps
+            const allSteps = document.querySelectorAll('.form-step');
+            allSteps.forEach((step, index) => {
+                console.log(`   Step ${index + 1}: data-step="${step.dataset.step}"`);
+            });
+        }
+        
+        // Update progress indicator
+        this.currentStep = stepNumber;
+        this.updateProgressIndicator();
+        console.log(`🔍 Current step updated to: ${this.currentStep}`);
+    }
+
+    nextStep() {
+        console.log(`🔍 nextStep() called from step ${this.currentStep}`);
+        if (this.currentStep < this.totalSteps) {
+            console.log(`🔍 Validating step ${this.currentStep} before proceeding...`);
+            // Validate current step before proceeding
+            if (this.validateCurrentStep()) {
+                console.log(`🔍 Validation passed, moving to step ${this.currentStep + 1}`);
+                this.showStep(this.currentStep + 1);
+            } else {
+                console.log(`❌ Validation failed for step ${this.currentStep}`);
+            }
+        } else {
+            console.log(`🔍 Already at last step (${this.currentStep}/${this.totalSteps})`);
+        }
+    }
+
+    // Temporary test function to bypass validation
+    nextStepNoValidation() {
+        console.log(`🧪 nextStepNoValidation() called from step ${this.currentStep}`);
+        if (this.currentStep < this.totalSteps) {
+            console.log(`🧪 Bypassing validation, moving to step ${this.currentStep + 1}`);
+            this.showStep(this.currentStep + 1);
+        }
+    }
+
+    // Test function to show specific step
+    showStepTest(stepNumber) {
+        console.log(`🧪 showStepTest(${stepNumber}) called`);
+        this.showStep(stepNumber);
+    }
+
+    prevStep() {
+        console.log(`🔍 prevStep() called from step ${this.currentStep}`);
+        if (this.currentStep > 1) {
+            console.log(`🔍 Moving to step ${this.currentStep - 1}`);
+            this.showStep(this.currentStep - 1);
+        } else {
+            console.log(`🔍 Already at first step`);
+        }
+    }
+
+    validateCurrentStep() {
+        console.log(`🔍 validateCurrentStep() called for step ${this.currentStep}`);
+        const currentStepElement = document.querySelector(`[data-step="${this.currentStep}"]`);
+        if (!currentStepElement) {
+            console.error(`❌ Could not find current step element for step ${this.currentStep}`);
+            return true; // Allow progression if we can't find the element
+        }
+
+        // Get all required fields in current step
+        const requiredFields = currentStepElement.querySelectorAll('[required]');
+        console.log(`🔍 Found ${requiredFields.length} required fields in step ${this.currentStep}`);
+        
+        let isValid = true;
+        let firstInvalidField = null;
+
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                console.log(`❌ Required field ${field.id} is empty`);
+                field.style.borderColor = '#dc3545';
+                if (!firstInvalidField) firstInvalidField = field;
+                isValid = false;
+            } else {
+                console.log(`✅ Required field ${field.id} is valid: "${field.value}"`);
+                field.style.borderColor = '#e1e5e9';
+            }
+        });
+
+        // Special validation for venue types (step 4)
+        if (this.currentStep === 4) {
+            const venueTypeCheckboxes = currentStepElement.querySelectorAll('input[name="venueTypes"]:checked');
+            if (venueTypeCheckboxes.length === 0) {
+                console.log(`❌ No venue types selected in step 4`);
+                alert('Please select at least one venue type.');
+                isValid = false;
+            } else {
+                console.log(`✅ ${venueTypeCheckboxes.length} venue types selected`);
+            }
+        }
+
+        // Special validation for group size (step 1)
+        if (this.currentStep === 1) {
+            const groupSizeField = document.getElementById('groupSize');
+            if (groupSizeField && (parseInt(groupSizeField.value) < 1 || parseInt(groupSizeField.value) > 20)) {
+                console.log(`❌ Invalid group size: ${groupSizeField.value}`);
+                alert('Group size must be between 1 and 20.');
+                groupSizeField.style.borderColor = '#dc3545';
+                isValid = false;
+            } else if (groupSizeField) {
+                console.log(`✅ Group size is valid: ${groupSizeField.value}`);
+            }
+        }
+
+        if (!isValid && firstInvalidField) {
+            firstInvalidField.focus();
+        }
+
+        console.log(`🔍 Step ${this.currentStep} validation result: ${isValid ? 'PASSED' : 'FAILED'}`);
+        return isValid;
     }
 
     async handleCityInput(cityName) {
@@ -422,4 +587,62 @@ function closePlanningForm() {
 
 function logout() {
     window.dashboardApp.logout();
+}
+
+function nextStep() {
+    window.dashboardApp.nextStep();
+}
+
+function prevStep() {
+    window.dashboardApp.prevStep();
+}
+
+// Test functions for debugging
+function nextStepNoValidation() {
+    window.dashboardApp.nextStepNoValidation();
+}
+
+function showStepTest(stepNumber) {
+    window.dashboardApp.showStepTest(stepNumber);
+}
+
+function debugCurrentStep() {
+    console.log(`🔍 Current step: ${window.dashboardApp.currentStep}`);
+    console.log(`🔍 Total steps: ${window.dashboardApp.totalSteps}`);
+    
+    const allSteps = document.querySelectorAll('.form-step');
+    console.log(`🔍 Found ${allSteps.length} form steps:`);
+    allSteps.forEach((step, index) => {
+        const isActive = step.classList.contains('active');
+        console.log(`   Step ${index + 1}: data-step="${step.dataset.step}", active: ${isActive}`);
+    });
+}
+
+// Test function to debug modal issues
+function testModal() {
+    console.log('🧪 Test Modal function called');
+    console.log('🧪 Checking if planningModal element exists...');
+    
+    const modal = document.getElementById('planningModal');
+    console.log('🧪 Modal element:', modal);
+    
+    if (modal) {
+        console.log('🧪 Modal found! Adding active class...');
+        modal.classList.add('active');
+        console.log('🧪 Modal classes after adding active:', modal.className);
+        console.log('🧪 Modal computed styles:');
+        console.log('   - display:', window.getComputedStyle(modal).display);
+        console.log('   - opacity:', window.getComputedStyle(modal).opacity);
+        console.log('   - visibility:', window.getComputedStyle(modal).visibility);
+        console.log('   - z-index:', window.getComputedStyle(modal).zIndex);
+    } else {
+        console.error('🧪 Modal NOT found!');
+        console.log('🧪 All elements with "planning" in ID:');
+        const allElements = document.querySelectorAll('[id*="planning"]');
+        allElements.forEach(el => console.log('   -', el.id, el.tagName));
+        
+        console.log('🧪 All elements with "modal" in ID:');
+        const modalElements = document.querySelectorAll('[id*="modal"]');
+        modalElements.forEach(el => console.log('   -', el.id, el.tagName));
+    }
 } 
