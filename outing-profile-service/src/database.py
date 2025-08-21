@@ -15,7 +15,7 @@ class Database:
         """Initialize database connection"""
         try:
             self.client = MongoClient(self.mongo_uri)
-            self.db = self.client.outing_profiles
+            self.db = self.client.planeet
             self.profiles_collection = self.db.profiles
             logger.info("Successfully connected to MongoDB")
         except Exception as e:

@@ -14,12 +14,12 @@ spec:
     spec:
       containers:
         - name: outing-profile-service
-          image: nikaklimenchuk/outing-profile-service:v1.5
+          image: nikaklimenchuk/outing-profile-service:v1.7
           ports:
             - containerPort: 5000
           env:
             - name: MONGO_URI
-              value: mongodb://mongo:27017/outing_profiles
+              value: mongodb://mongo:27017/planeet
           imagePullPolicy: Always
           resources:
             requests:
@@ -41,6 +41,16 @@ spec:
       port: 80
       targetPort: 5000
 
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,7 +66,6 @@ spec:
       labels:
         app: mongo
     spec:
-      restartPolicy: Always
       containers:
         - name: mongo
           image: mongo:5
@@ -74,10 +83,9 @@ spec:
               cpu: "500m"
       volumes:
         - name: mongo-storage
-          emptyDir: {}
-
+          persistentVolumeClaim:
+            claimName: mongo-pvc
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -90,7 +98,9 @@ spec:
       protocol: TCP
       port: 27017
       targetPort: 27017
-  type: ClusterIP
+      nodePort: 30017   # 🔑 Expose Mongo on your local node
+  type: NodePort        # 🔑 Makes it accessible from Compass
+
 
 ---
 apiVersion: apps/v1
@@ -160,7 +170,7 @@ spec:
             - containerPort: 8080
           env:
             - name: SPRING_DATA_MONGODB_URI
-              value: mongodb://mongo:27017/usersdb
+              value: mongodb://mongo:27017/planeet
             - name: OUTING_PROFILE_SERVICE_BASE_URL
               value: http://outing-profile-service
           resources:
