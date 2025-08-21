@@ -28,7 +28,7 @@ class OutingProfileClient:
         """
         try:
             response = await self.client.get(
-                f"{self.outing_profile_service_url}/preferences/{user_id}"
+                f"{self.outing_profile_service_url}/profiles?user_id={user_id}"
             )
             
             if response.status_code == 200:
@@ -61,7 +61,7 @@ class OutingProfileClient:
         """
         try:
             response = await self.client.get(
-                f"{self.outing_profile_service_url}/profile/{user_id}"
+                f"{self.outing_profile_service_url}/profiles?user_id={user_id}"
             )
             
             if response.status_code == 200:
