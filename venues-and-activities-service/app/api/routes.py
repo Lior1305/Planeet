@@ -8,7 +8,7 @@ from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
     SearchRequest, SearchResponse, PersonalizedSearchRequest, PersonalizedSearchResponse,
     MessageResponse, PaginatedResponse, UserPreferences,
-    VenueType
+    VenueType, TimeSlot, TimeSlotCreate, TimeSlotUpdate, TimeSlotSearchRequest, TimeSlotSearchResponse, TimeSlotStatus
 )
 
 # Initialize router
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1", tags=["venues"])
 logger = logging.getLogger(__name__)
 
 # Import database storage and services
-from app.db import venues_db, save_data_to_file
+from app.db import get_venues_collection, get_time_slots_collection
 from app.services.planning_integration import planning_integration
 from app.services.personalization import personalization_service
 from app.services.plan_generator import plan_generator
@@ -74,19 +74,16 @@ async def generate_venue_plan(plan_request: dict):
 @router.post("/venues", response_model=Venue, status_code=status.HTTP_201_CREATED)
 async def create_venue(venue: VenueCreate):
     """Create a new venue"""
-    venue_id = str(uuid.uuid4())
-    now = datetime.utcnow()
+    venues_collection = get_venues_collection()
     
-    new_venue = Venue(
-        id=venue_id,
-        **venue.dict(),
-        created_at=now,
-        updated_at=now
-    )
+    venue_data = venue.dict()
+    venue_data["created_at"] = datetime.utcnow()
+    venue_data["updated_at"] = datetime.utcnow()
     
-    venues_db[venue_id] = new_venue
-    save_data_to_file()  # Persist data
-    return new_venue
+    result = venues_collection.insert_one(venue_data)
+    venue_data["id"] = str(result.inserted_id)
+    
+    return Venue(**venue_data)
 
 @router.get("/venues", response_model=PaginatedResponse)
 async def get_venues(
@@ -97,32 +94,35 @@ async def get_venues(
     min_rating: Optional[float] = Query(None, ge=0, le=5, description="Minimum rating")
 ):
     """Get all venues with optional filtering and pagination"""
-    filtered_venues = list(venues_db.values())
+    venues_collection = get_venues_collection()
     
-    # Apply filters
+    # Build filter
+    filter_query = {}
     if venue_type:
-        filtered_venues = [v for v in filtered_venues if v.venue_type == venue_type]
-    
+        filter_query["venue_type"] = venue_type
     if city:
-        filtered_venues = [v for v in filtered_venues if v.location.city and v.location.city.lower() == city.lower()]
-    
+        filter_query["location.city"] = {"$regex": city, "$options": "i"}
     if min_rating is not None:
-        filtered_venues = [v for v in filtered_venues if v.rating and v.rating >= min_rating]
+        filter_query["rating"] = {"$gte": min_rating}
     
-    # Pagination
-    total = len(filtered_venues)
-    start_idx = (page - 1) * size
-    end_idx = start_idx + size
-    paginated_venues = filtered_venues[start_idx:end_idx]
+    # Get total count
+    total = venues_collection.count_documents(filter_query)
     
-    pages = (total + size - 1) // size
+    # Get paginated results
+    skip = (page - 1) * size
+    venues_cursor = venues_collection.find(filter_query).skip(skip).limit(size)
+    
+    venues = []
+    for venue_doc in venues_cursor:
+        venue_doc["id"] = str(venue_doc["_id"])
+        venues.append(Venue(**venue_doc))
     
     return PaginatedResponse(
-        items=paginated_venues,
+        items=venues,
         total=total,
         page=page,
         size=size,
-        pages=pages
+        pages=(total + size - 1) // size
     )
 
 @router.get("/venues/{venue_id}", response_model=Venue)
@@ -410,3 +410,130 @@ async def get_service_stats():
         "total_venues": len(venues_db),
         "venue_types": {vt.value: len([v for v in venues_db.values() if v.venue_type == vt]) for vt in VenueType}
     }
+
+# Add time slot endpoints
+@router.post("/time-slots", response_model=TimeSlot, status_code=status.HTTP_201_CREATED)
+async def create_time_slot(time_slot: TimeSlotCreate):
+    """Create a new time slot"""
+    time_slots_collection = get_time_slots_collection()
+    
+    time_slot_data = time_slot.dict()
+    time_slot_data["created_at"] = datetime.utcnow()
+    time_slot_data["updated_at"] = datetime.utcnow()
+    time_slot_data["current_bookings"] = 0
+    
+    result = time_slots_collection.insert_one(time_slot_data)
+    time_slot_data["id"] = str(result.inserted_id)
+    
+    return TimeSlot(**time_slot_data)
+
+@router.get("/time-slots", response_model=TimeSlotSearchResponse)
+async def search_time_slots(
+    venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
+    date: Optional[str] = Query(None, description="Filter by date"),
+    start_date: Optional[str] = Query(None, description="Filter by start date"),
+    end_date: Optional[str] = Query(None, description="Filter by end date"),
+    status: Optional[TimeSlotStatus] = Query(None, description="Filter by status"),
+    min_capacity: Optional[int] = Query(None, description="Minimum capacity required"),
+    max_price: Optional[float] = Query(None, description="Maximum price"),
+    limit: int = Query(20, gt=0, le=100, description="Maximum number of results"),
+    offset: int = Query(0, ge=0, description="Pagination offset")
+):
+    """Search time slots with filtering"""
+    time_slots_collection = get_time_slots_collection()
+    
+    # Build filter
+    filter_query = {}
+    if venue_id:
+        filter_query["venue_id"] = venue_id
+    if date:
+        filter_query["date"] = date
+    if start_date and end_date:
+        filter_query["date"] = {"$gte": start_date, "$lte": end_date}
+    elif start_date:
+        filter_query["date"] = {"$gte": start_date}
+    elif end_date:
+        filter_query["date"] = {"$lte": end_date}
+    if status:
+        filter_query["status"] = status
+    if min_capacity:
+        filter_query["capacity"] = {"$gte": min_capacity}
+    if max_price:
+        filter_query["price"] = {"$lte": max_price}
+    
+    # Get total count
+    total = time_slots_collection.count_documents(filter_query)
+    
+    # Get paginated results
+    time_slots_cursor = time_slots_collection.find(filter_query).skip(offset).limit(limit)
+    
+    time_slots = []
+    for slot_doc in time_slots_cursor:
+        slot_doc["id"] = str(slot_doc["_id"])
+        time_slots.append(TimeSlot(**slot_doc))
+    
+    return TimeSlotSearchResponse(
+        time_slots=time_slots,
+        total_count=total,
+        has_more=offset + limit < total
+    )
+
+@router.get("/time-slots/{time_slot_id}", response_model=TimeSlot)
+async def get_time_slot(time_slot_id: str = Path(..., description="Time slot ID")):
+    """Get a specific time slot by ID"""
+    time_slots_collection = get_time_slots_collection()
+    
+    from bson import ObjectId
+    try:
+        slot_doc = time_slots_collection.find_one({"_id": ObjectId(time_slot_id)})
+        if not slot_doc:
+            raise HTTPException(status_code=404, detail="Time slot not found")
+        
+        slot_doc["id"] = str(slot_doc["_id"])
+        return TimeSlot(**slot_doc)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid time slot ID")
+
+@router.put("/time-slots/{time_slot_id}", response_model=TimeSlot)
+async def update_time_slot(
+    time_slot_id: str = Path(..., description="Time slot ID"),
+    time_slot_update: TimeSlotUpdate = None
+):
+    """Update a time slot"""
+    time_slots_collection = get_time_slots_collection()
+    
+    from bson import ObjectId
+    try:
+        update_data = time_slot_update.dict(exclude_unset=True)
+        update_data["updated_at"] = datetime.utcnow()
+        
+        result = time_slots_collection.update_one(
+            {"_id": ObjectId(time_slot_id)},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Time slot not found")
+        
+        # Return updated time slot
+        slot_doc = time_slots_collection.find_one({"_id": ObjectId(time_slot_id)})
+        slot_doc["id"] = str(slot_doc["_id"])
+        return TimeSlot(**slot_doc)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid time slot ID")
+
+@router.delete("/time-slots/{time_slot_id}", response_model=MessageResponse)
+async def delete_time_slot(time_slot_id: str = Path(..., description="Time slot ID")):
+    """Delete a time slot"""
+    time_slots_collection = get_time_slots_collection()
+    
+    from bson import ObjectId
+    try:
+        result = time_slots_collection.delete_one({"_id": ObjectId(time_slot_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Time slot not found")
+        
+        return MessageResponse(message="Time slot deleted successfully", success=True)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid time slot ID")
