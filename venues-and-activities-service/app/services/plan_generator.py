@@ -86,6 +86,7 @@ class PlanGenerator:
                 "user_id": user_id,
                 "suggested_venues": venue_suggestions,
                 "total_venues_found": len(all_venues),
+                "venues_list": all_venues,
                 "estimated_total_duration": total_duration,
                 "travel_route": travel_route,
                 "personalization_applied": use_personalization and user_preferences is not None,
