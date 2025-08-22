@@ -263,7 +263,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v1.2
+          image: dartoledano/venues-service:v1.3
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -272,6 +272,8 @@ spec:
               value: "AIzaSyCPVz2SxWPbfrilbZ2wo8KcSlBNa8uPYPM"
             - name: PLANNING_SERVICE_URL
               value: http://planning-service:8001
+            - name: MONGO_URI
+              value: mongodb://mongo:27017/planeet
           resources:
             requests:
               memory: "256Mi"
