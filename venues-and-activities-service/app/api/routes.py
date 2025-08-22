@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import datetime
 import uuid
 import logging
+from bson import ObjectId
 
 from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
@@ -25,9 +26,20 @@ from app.services.plan_generator import plan_generator
 
 # Helper functions
 def get_venue_by_id(venue_id: str) -> Venue:
-    if venue_id not in venues_db:
-        raise HTTPException(status_code=404, detail="Venue not found")
-    return venues_db[venue_id]
+    """Get venue by ID from MongoDB"""
+    venues_collection = get_venues_collection()
+    
+    try:
+        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+        if not venue_doc:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        
+        venue_doc["id"] = str(venue_doc["_id"])
+        return Venue(**venue_doc)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=400, detail="Invalid venue ID")
 
 def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate distance between two points using Haversine formula"""
@@ -136,30 +148,56 @@ async def update_venue(
     venue_id: str = Path(..., description="Venue ID")
 ):
     """Update an existing venue"""
-    venue = get_venue_by_id(venue_id)
+    venues_collection = get_venues_collection()
     
-    update_data = venue_update.dict(exclude_unset=True)
-    update_data["updated_at"] = datetime.utcnow()
-    
-    updated_venue = venue.copy(update=update_data)
-    venues_db[venue_id] = updated_venue
-    save_data_to_file()  # Persist data
-    
-    return updated_venue
+    try:
+        update_data = venue_update.dict(exclude_unset=True)
+        update_data["updated_at"] = datetime.utcnow()
+        
+        result = venues_collection.update_one(
+            {"_id": ObjectId(venue_id)},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        
+        # Return updated venue
+        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+        venue_doc["id"] = str(venue_doc["_id"])
+        return Venue(**venue_doc)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=400, detail="Invalid venue ID")
 
 @router.delete("/venues/{venue_id}", response_model=MessageResponse)
 async def delete_venue(venue_id: str = Path(..., description="Venue ID")):
     """Delete a venue"""
-    venue = get_venue_by_id(venue_id)
+    venues_collection = get_venues_collection()
     
-    # Remove venue
-    del venues_db[venue_id]
-    save_data_to_file()  # Persist data
-    
-    return MessageResponse(
-        message=f"Venue '{venue.name}' deleted successfully",
-        success=True
-    )
+    try:
+        # Get venue name before deletion for response message
+        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+        if not venue_doc:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        
+        venue_name = venue_doc.get("name", "Unknown")
+        
+        # Delete the venue
+        result = venues_collection.delete_one({"_id": ObjectId(venue_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        
+        return MessageResponse(
+            message=f"Venue '{venue_name}' deleted successfully",
+            success=True
+        )
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=400, detail="Invalid venue ID")
 
 # Link management endpoints
 @router.post("/venues/{venue_id}/links", response_model=Venue, status_code=status.HTTP_200_OK)
@@ -168,18 +206,33 @@ async def add_venue_link(
     venue_id: str = Path(..., description="Venue ID")
 ):
     """Add a new link to a venue"""
-    venue = get_venue_by_id(venue_id)
+    venues_collection = get_venues_collection()
     
-    if venue.links is None:
-        venue.links = []
-    
-    venue.links.append(link)
-    venue.updated_at = datetime.utcnow()
-    
-    venues_db[venue_id] = venue
-    save_data_to_file()
-    
-    return venue
+    try:
+        # Get current venue
+        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+        if not venue_doc:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        
+        # Add link to venue
+        if "links" not in venue_doc:
+            venue_doc["links"] = []
+        
+        venue_doc["links"].append(link.dict())
+        venue_doc["updated_at"] = datetime.utcnow()
+        
+        # Update venue in database
+        venues_collection.update_one(
+            {"_id": ObjectId(venue_id)},
+            {"$set": {"links": venue_doc["links"], "updated_at": venue_doc["updated_at"]}}
+        )
+        
+        venue_doc["id"] = str(venue_doc["_id"])
+        return Venue(**venue_doc)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=400, detail="Invalid venue ID")
 
 @router.put("/venues/{venue_id}/links/{link_index}", response_model=Venue)
 async def update_venue_link(
@@ -188,18 +241,33 @@ async def update_venue_link(
     link_index: int = Path(..., ge=0, description="Index of the link to update")
 ):
     """Update a specific link for a venue"""
-    venue = get_venue_by_id(venue_id)
+    venues_collection = get_venues_collection()
     
-    if venue.links is None or link_index >= len(venue.links):
-        raise HTTPException(status_code=404, detail="Link not found")
-    
-    venue.links[link_index] = link
-    venue.updated_at = datetime.utcnow()
-    
-    venues_db[venue_id] = venue
-    save_data_to_file()
-    
-    return venue
+    try:
+        # Get current venue
+        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+        if not venue_doc:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        
+        if "links" not in venue_doc or link_index >= len(venue_doc["links"]):
+            raise HTTPException(status_code=404, detail="Link not found")
+        
+        # Update link
+        venue_doc["links"][link_index] = link.dict()
+        venue_doc["updated_at"] = datetime.utcnow()
+        
+        # Update venue in database
+        venues_collection.update_one(
+            {"_id": ObjectId(venue_id)},
+            {"$set": {"links": venue_doc["links"], "updated_at": venue_doc["updated_at"]}}
+        )
+        
+        venue_doc["id"] = str(venue_doc["_id"])
+        return Venue(**venue_doc)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=400, detail="Invalid venue ID")
 
 @router.delete("/venues/{venue_id}/links/{link_index}", response_model=Venue)
 async def delete_venue_link(
@@ -207,18 +275,33 @@ async def delete_venue_link(
     link_index: int = Path(..., description="Index of the link to delete")
 ):
     """Delete a specific link from a venue"""
-    venue = get_venue_by_id(venue_id)
+    venues_collection = get_venues_collection()
     
-    if venue.links is None or link_index >= len(venue.links):
-        raise HTTPException(status_code=404, detail="Link not found")
-    
-    deleted_link = venue.links.pop(link_index)
-    venue.updated_at = datetime.utcnow()
-    
-    venues_db[venue_id] = venue
-    save_data_to_file()
-    
-    return venue
+    try:
+        # Get current venue
+        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+        if not venue_doc:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        
+        if "links" not in venue_doc or link_index >= len(venue_doc["links"]):
+            raise HTTPException(status_code=404, detail="Link not found")
+        
+        # Remove link
+        deleted_link = venue_doc["links"].pop(link_index)
+        venue_doc["updated_at"] = datetime.utcnow()
+        
+        # Update venue in database
+        venues_collection.update_one(
+            {"_id": ObjectId(venue_id)},
+            {"$set": {"links": venue_doc["links"], "updated_at": venue_doc["updated_at"]}}
+        )
+        
+        venue_doc["id"] = str(venue_doc["_id"])
+        return Venue(**venue_doc)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=400, detail="Invalid venue ID")
 
 @router.get("/venues/{venue_id}/links", response_model=List[VenueLink])
 async def get_venue_links(venue_id: str = Path(..., description="Venue ID")):
@@ -284,8 +367,14 @@ async def get_personalized_recommendations(
     if not user_preferences:
         raise HTTPException(status_code=404, detail="No preferences found for user")
     
-    # Get all venues
-    all_venues = list(venues_db.values())
+    # Get all venues from MongoDB
+    venues_collection = get_venues_collection()
+    venues_cursor = venues_collection.find({})
+    
+    all_venues = []
+    for venue_doc in venues_cursor:
+        venue_doc["id"] = str(venue_doc["_id"])
+        all_venues.append(Venue(**venue_doc))
     
     # Get personalized recommendations
     recommendations = personalization_service.get_personalized_recommendations(
@@ -322,19 +411,25 @@ async def quick_search(
     limit: int = Query(10, ge=1, le=50, description="Maximum results")
 ):
     """Quick search by text query"""
-    query_lower = query.lower()
+    venues_collection = get_venues_collection()
+    
+    # Build text search query
+    search_query = {
+        "$or": [
+            {"name": {"$regex": query, "$options": "i"}},
+            {"description": {"$regex": query, "$options": "i"}},
+            {"location.city": {"$regex": query, "$options": "i"}}
+        ]
+    }
+    
+    # Get matching venues
+    venues_cursor = venues_collection.find(search_query).limit(limit)
     
     matching_venues = []
+    for venue_doc in venues_cursor:
+        venue_doc["id"] = str(venue_doc["_id"])
+        matching_venues.append(Venue(**venue_doc))
     
-    # Search venues
-    for venue in venues_db.values():
-        if (query_lower in venue.name.lower() or 
-            (venue.description and query_lower in venue.description.lower()) or
-            (venue.location.city and query_lower in venue.location.city.lower())):
-            matching_venues.append(venue)
-    
-    # Limit results
-    matching_venues = matching_venues[:limit]
     total_count = len(matching_venues)
     
     return SearchResponse(
@@ -345,47 +440,58 @@ async def quick_search(
 
 # Helper function for base search logic
 async def _perform_base_search(request) -> List[Venue]:
-    """Perform base search filtering logic"""
-    matching_venues = []
+    """Perform base search filtering logic using MongoDB"""
+    venues_collection = get_venues_collection()
     
-    # Search venues
-    for venue in venues_db.values():
-        include_venue = True
+    # Build filter query
+    filter_query = {}
+    
+    # Type filtering
+    if request.venue_types:
+        filter_query["venue_type"] = {"$in": request.venue_types}
+    
+    # Rating filtering
+    if request.min_rating is not None:
+        filter_query["rating"] = {"$gte": request.min_rating}
+    
+    # Price filtering (simplified - could be enhanced)
+    if request.max_price is not None:
+        # This is a simplified approach - you might want to store actual price ranges
+        # or implement more sophisticated price filtering
+        pass
+    
+    # Amenities filtering
+    if request.amenities:
+        filter_query["amenities"] = {"$all": request.amenities}
+    
+    # Get venues from MongoDB
+    venues_cursor = venues_collection.find(filter_query)
+    
+    matching_venues = []
+    for venue_doc in venues_cursor:
+        venue_doc["id"] = str(venue_doc["_id"])
+        venue = Venue(**venue_doc)
         
-        # Location-based filtering
+        # Location-based filtering (post-query since we need to calculate distances)
         if request.location:
             distance = calculate_distance(
                 request.location.latitude, request.location.longitude,
                 venue.location.latitude, venue.location.longitude
             )
             if distance > request.radius_km:
-                include_venue = False
+                continue
         
-        # Type filtering
-        if request.venue_types and venue.venue_type not in request.venue_types:
-            include_venue = False
-        
-        # Rating filtering
-        if request.min_rating is not None and (venue.rating is None or venue.rating < request.min_rating):
-            include_venue = False
-        
-        # Price filtering
+        # Price filtering (post-query)
         if request.max_price is not None:
             # Simple price range parsing (could be enhanced)
             if venue.price_range == "$$$" and request.max_price < 50:
-                include_venue = False
+                continue
             elif venue.price_range == "$$" and request.max_price < 25:
-                include_venue = False
+                continue
             elif venue.price_range == "$" and request.max_price < 10:
-                include_venue = False
+                continue
         
-        # Amenities filtering
-        if request.amenities and venue.amenities:
-            if not all(amenity in venue.amenities for amenity in request.amenities):
-                include_venue = False
-        
-        if include_venue:
-            matching_venues.append(venue)
+        matching_venues.append(venue)
     
     return matching_venues
 
@@ -406,9 +512,20 @@ async def health_check():
 @router.get("/stats", response_model=dict)
 async def get_service_stats():
     """Get service statistics"""
+    venues_collection = get_venues_collection()
+    
+    # Get total venues count
+    total_venues = venues_collection.count_documents({})
+    
+    # Get venue types distribution
+    venue_types = {}
+    for vt in VenueType:
+        count = venues_collection.count_documents({"venue_type": vt.value})
+        venue_types[vt.value] = count
+    
     return {
-        "total_venues": len(venues_db),
-        "venue_types": {vt.value: len([v for v in venues_db.values() if v.venue_type == vt]) for vt in VenueType}
+        "total_venues": total_venues,
+        "venue_types": venue_types
     }
 
 # Add time slot endpoints
@@ -483,7 +600,6 @@ async def get_time_slot(time_slot_id: str = Path(..., description="Time slot ID"
     """Get a specific time slot by ID"""
     time_slots_collection = get_time_slots_collection()
     
-    from bson import ObjectId
     try:
         slot_doc = time_slots_collection.find_one({"_id": ObjectId(time_slot_id)})
         if not slot_doc:
@@ -502,7 +618,6 @@ async def update_time_slot(
     """Update a time slot"""
     time_slots_collection = get_time_slots_collection()
     
-    from bson import ObjectId
     try:
         update_data = time_slot_update.dict(exclude_unset=True)
         update_data["updated_at"] = datetime.utcnow()
@@ -527,7 +642,6 @@ async def delete_time_slot(time_slot_id: str = Path(..., description="Time slot 
     """Delete a time slot"""
     time_slots_collection = get_time_slots_collection()
     
-    from bson import ObjectId
     try:
         result = time_slots_collection.delete_one({"_id": ObjectId(time_slot_id)})
         
