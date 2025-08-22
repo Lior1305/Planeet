@@ -298,6 +298,7 @@ class PlanPageController {
             const planResponse = await this.createPlan(formData);
             
             // Show success message
+            console.log(JSON.stringify(planResponse, null, 2));
             alert(`Plan created successfully! Plan ID: ${planResponse.plan_id}`);
             
             // Close modal and refresh page

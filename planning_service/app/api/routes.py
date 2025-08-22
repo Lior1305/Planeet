@@ -53,6 +53,7 @@ async def create_plan(plan_request: PlanRequest):
                 "plan_id": plan_id,
                 "status": "completed",
                 "venues_found": venues_plan_response.get("total_venues_found", 0),
+                "venues_list": venues_plan_response.get("venues_list", []),
                 "estimated_duration": venues_plan_response.get("estimated_total_duration")
             }
         else:
