@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import userService from '../services/userService.js';
 import PlanningModal from './PlanningModal.js';
+import HowItWorksModal from './HowItWorksModal.js';
 
 const Home = () => {
   const navigate = useNavigate();
   const [isPlanningModalOpen, setIsPlanningModalOpen] = useState(false);
+  const [isHowItWorksModalOpen, setIsHowItWorksModalOpen] = useState(false);
   const currentUser = userService.getCurrentUser();
 
   const handleStartPlanning = () => {
@@ -78,7 +80,7 @@ const Home = () => {
             <div>
               <h2>Why choose Planeet?</h2>
               <p>We've built the most comprehensive venue discovery platform in Israel. From trendy cafes to hidden gems, we help you find exactly what you're looking for.</p>
-              <button className="btn btn-secondary">How it works</button>
+              <button className="btn btn-secondary" onClick={() => setIsHowItWorksModalOpen(true)}>How it works</button>
             </div>
           </div>
         </div>
@@ -100,6 +102,12 @@ const Home = () => {
         isOpen={isPlanningModalOpen}
         onClose={() => setIsPlanningModalOpen(false)}
         onPlanCreated={handlePlanCreated}
+      />
+
+      {/* How It Works Modal */}
+      <HowItWorksModal
+        isOpen={isHowItWorksModalOpen}
+        onClose={() => setIsHowItWorksModalOpen(false)}
       />
     </>
   );

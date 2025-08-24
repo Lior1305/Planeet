@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import userService from '../services/userService.js';
+import EditUserModal from './EditUserModal.js';
 
 const Header = () => {
   const navigate = useNavigate();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const currentUser = userService.getCurrentUser();
 
   const handleLogout = () => {
@@ -17,6 +19,12 @@ const Header = () => {
       return;
     }
     navigate('/plan');
+  };
+
+  const handleUserUpdated = (updatedUser) => {
+    // The userService already updates the storage, so we just need to force a re-render
+    // by updating the component state or triggering a refresh
+    window.location.reload();
   };
 
   return (
@@ -37,7 +45,7 @@ const Header = () => {
           <div className="user-menu">
             {currentUser ? (
               <>
-                <div className="user-info">
+                <div className="user-info" onClick={() => setIsEditModalOpen(true)} style={{ cursor: 'pointer' }}>
                   <div className="user-avatar">
                     {currentUser.username.charAt(0).toUpperCase()}
                   </div>
@@ -56,6 +64,13 @@ const Header = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onUserUpdated={handleUserUpdated}
+      />
     </header>
   );
 };

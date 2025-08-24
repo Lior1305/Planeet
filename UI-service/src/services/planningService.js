@@ -135,11 +135,13 @@ class PlanningService {
       { value: 'restaurant', label: 'Restaurant' },
       { value: 'cafe', label: 'Café' },
       { value: 'bar', label: 'Bar' },
-      { value: 'club', label: 'Nightclub' },
-      { value: 'entertainment', label: 'Entertainment' },
-      { value: 'outdoor', label: 'Outdoor Activity' },
-      { value: 'cultural', label: 'Cultural Venue' },
-      { value: 'sports', label: 'Sports Venue' }
+      { value: 'museum', label: 'Museum' },
+      { value: 'theater', label: 'Theater' },
+      { value: 'park', label: 'Park' },
+      { value: 'shopping_center', label: 'Shopping Center' },
+      { value: 'sports_facility', label: 'Sports Facility' },
+      { value: 'hotel', label: 'Hotel' },
+      { value: 'other', label: 'Other' }
     ];
   }
 

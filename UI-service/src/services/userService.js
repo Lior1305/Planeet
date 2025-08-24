@@ -104,6 +104,45 @@ class UserService {
     console.log('User logged out');
   }
 
+  async updateUser(userId, userData) {
+    try {
+      console.log('Attempting to update user:', userId, userData);
+      
+      // Get current user to preserve password
+      const currentUser = this.getCurrentUser();
+      if (!currentUser) {
+        return { success: false, error: 'No current user found' };
+      }
+      
+      // Merge update data with existing user data, preserving password
+      const updateData = {
+        ...currentUser,
+        ...userData,
+        password: currentUser.password // Always preserve the password
+      };
+      
+      const response = await fetch(`${configService.getUsersServiceUrl()}/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        console.log('User update successful:', updatedUser);
+        this.saveUserToStorage(updatedUser);
+        return { success: true, user: updatedUser };
+      } else {
+        const errorText = await response.text();
+        console.error('User update failed:', errorText);
+        return { success: false, error: 'Update failed. Please try again.' };
+      }
+    } catch (error) {
+      console.error('Update error:', error);
+      return { success: false, error: 'Connection error. Please check if all services are running.' };
+    }
+  }
+
   validateRegistrationData(userData) {
     const { username, password, email, phone } = userData;
     
