@@ -40,7 +40,9 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 5000
-
+      nodePort: 30004
+  type: NodePort
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -119,10 +121,11 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:v2.0.9
+          image: nikaklimenchuk/planeet-ui:v2.0.27
           imagePullPolicy: Always
           ports:
             - containerPort: 80
+
           resources:
             requests:
               memory: "64Mi"
@@ -195,7 +198,8 @@ spec:
       protocol: TCP
       port: 80
       targetPort: 8080
-  type: ClusterIP
+      nodePort: 30002
+  type: NodePort
 
 ---
 apiVersion: apps/v1
@@ -244,7 +248,8 @@ spec:
       protocol: TCP
       port: 8001
       targetPort: 8001
-  type: ClusterIP
+      nodePort: 30001
+  type: NodePort
 
 ---
 apiVersion: apps/v1
@@ -295,4 +300,5 @@ spec:
       protocol: TCP
       port: 8000
       targetPort: 8000
-  type: ClusterIP
+      nodePort: 30003
+  type: NodePort
