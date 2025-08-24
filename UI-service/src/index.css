@@ -73,12 +73,12 @@ code {
 }
 
 .btn-primary {
-  background: var(--primary);
+  background: #bc9bf3;
   color: white;
 }
 
 .btn-primary:hover {
-  background: var(--primary-dark);
+  background: #b9d440;
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
 }
@@ -222,9 +222,12 @@ code {
 /* Feature cards */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 32px;
   margin: 80px 0;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .feature-card {
@@ -338,6 +341,63 @@ code {
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+}
+
+/* How It Works Modal specific styles */
+.how-it-works-modal {
+  max-width: 700px;
+}
+
+.steps-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+  background: var(--background-alt);
+  border-radius: var(--radius);
+  border-left: 4px solid var(--accent-1);
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--accent-1);
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.step-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.step-description {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
 }
 
 .modal {
@@ -555,6 +615,7 @@ code {
     grid-template-columns: 1fr;
     gap: 24px;
     margin: 60px 0;
+    max-width: none;
   }
   
   .highlights-content {
