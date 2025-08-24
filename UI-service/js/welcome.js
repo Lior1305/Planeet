@@ -1,6 +1,8 @@
 // Planeet Welcome Page Logic
 class WelcomeApp {
     constructor() {
+        console.log('WelcomeApp constructor called');
+        console.log('appConfig available in constructor:', window.appConfig);
         this.currentUser = null;
         this.init();
     }
@@ -35,6 +37,15 @@ class WelcomeApp {
 
     async validateRegister() {
         console.log('validateRegister called');
+        console.log('window.appConfig:', window.appConfig);
+        console.log('typeof window.appConfig:', typeof window.appConfig);
+        
+        if (!window.appConfig) {
+            console.error('appConfig is not available!');
+            alert('Configuration not loaded. Please refresh the page.');
+            return;
+        }
+        
         const username = document.getElementById('regUsername').value.trim();
         const password = document.getElementById('regPassword').value.trim();
         const email = document.getElementById('regEmail').value.trim();
@@ -60,6 +71,7 @@ class WelcomeApp {
 
         try {
             console.log('Attempting to register user:', username);
+            console.log('Using service URL:', window.appConfig.getUsersServiceUrl());
             
             // Create user
             const userData = {
@@ -69,7 +81,7 @@ class WelcomeApp {
                 phone: phone
             };
 
-            const userResponse = await fetch('http://localhost:8080/users', {
+            const userResponse = await fetch(`${window.appConfig.getUsersServiceUrl()}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData)
@@ -105,7 +117,7 @@ class WelcomeApp {
             console.log('Attempting to login user:', username);
             
             // Get all users and find the matching one
-            const response = await fetch('http://localhost:8080/users');
+            const response = await fetch(`${window.appConfig.getUsersServiceUrl()}`);
             if (response.ok) {
                 const users = await response.json();
                 console.log('Retrieved users:', users);

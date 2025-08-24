@@ -90,6 +90,49 @@ class CommonUtils {
         }
     }
 
+    // Helper method to get service URL from config
+    getServiceUrl(serviceName) {
+        if (window.appConfig) {
+            return window.appConfig.getServiceUrl(serviceName);
+        }
+        // Fallback to localhost if config is not available
+        const fallbackUrls = {
+            planning: 'http://localhost:8001',
+            users: 'http://localhost:8080',
+            venues: 'http://localhost:8000',
+            outingProfile: 'http://localhost:5000'
+        };
+        return fallbackUrls[serviceName] || null;
+    }
+
+    // Helper method to make API calls to specific services
+    async callService(serviceName, endpoint, options = {}) {
+        const baseUrl = this.getServiceUrl(serviceName);
+        if (!baseUrl) {
+            throw new Error(`Service ${serviceName} not configured`);
+        }
+        
+        const url = `${baseUrl}${endpoint}`;
+        return this.apiFetch(url, options);
+    }
+
+    // Specific service call methods
+    async callPlanningService(endpoint, options = {}) {
+        return this.callService('planning', endpoint, options);
+    }
+
+    async callUsersService(endpoint, options = {}) {
+        return this.callService('users', endpoint, options);
+    }
+
+    async callVenuesService(endpoint, options = {}) {
+        return this.callService('venues', endpoint, options);
+    }
+
+    async callOutingProfileService(endpoint, options = {}) {
+        return this.callService('outingProfile', endpoint, options);
+    }
+
     // Update header with user info
     updateHeader() {
         const headerActions = document.getElementById('headerActions');

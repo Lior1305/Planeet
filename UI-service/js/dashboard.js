@@ -525,7 +525,7 @@ class DashboardApp {
         };
 
         // Make API call to Planning Service
-        const response = await fetch('http://localhost:8001/v1/plans/create', {
+        const response = await fetch(`${window.appConfig.getPlanningServiceUrl()}/v1/plans/create`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

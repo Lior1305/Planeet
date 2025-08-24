@@ -67,7 +67,7 @@ class PlaneetApp {
                 phone: phone
             };
 
-            const userResponse = await fetch('http://localhost:8080/users', {
+            const userResponse = await fetch(`${window.appConfig.getUsersServiceUrl()}/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData)
@@ -102,7 +102,7 @@ class PlaneetApp {
             console.log('Attempting to login user:', username);
             
             // Get all users and find the matching one
-            const response = await fetch('http://localhost:8080/users');
+            const response = await fetch(`${window.appConfig.getUsersServiceUrl()}/users`);
             if (response.ok) {
                 const users = await response.json();
                 console.log('Retrieved users:', users);
