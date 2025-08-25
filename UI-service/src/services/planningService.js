@@ -12,7 +12,17 @@ class PlanningService {
       'ashdod': { lat: 31.8044, lng: 34.6500 },
       'rishon lezion': { lat: 31.9600, lng: 34.8000 },
       'petah tikva': { lat: 32.0853, lng: 34.8860 },
-      'holon': { lat: 32.0167, lng: 34.7792 }
+      'holon': { lat: 32.0167, lng: 34.7792 },
+      'ramat gan': { lat: 32.0689, lng: 34.8248 },
+      'bat yam': { lat: 32.0233, lng: 34.7503 },
+      'kfar saba': { lat: 32.1750, lng: 34.9070 },
+      'raanana': { lat: 32.1833, lng: 34.8667 },
+      'herzliya': { lat: 32.1667, lng: 34.8333 },
+      'modiin': { lat: 31.8928, lng: 35.0153 },
+      'yavne': { lat: 31.8781, lng: 34.7397 },
+      'rosh haayin': { lat: 32.0950, lng: 34.9567 },
+      'kfar yona': { lat: 32.3167, lng: 34.9333 },
+      'tiberias': { lat: 32.7947, lng: 35.5327 }
     };
   }
 
@@ -21,6 +31,17 @@ class PlanningService {
     
     const normalizedCity = cityName.toLowerCase().trim();
     return this.cityCoordinates[normalizedCity] || null;
+  }
+
+  // Get all available cities
+  getAllCities() {
+    return Object.entries(this.cityCoordinates).map(([name, coords]) => ({
+      name: name,
+      value: name,
+      displayName: name.charAt(0).toUpperCase() + name.slice(1),
+      lat: coords.lat,
+      lng: coords.lng
+    }));
   }
 
   validatePlanningFormData(formData) {

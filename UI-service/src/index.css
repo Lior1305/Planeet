@@ -484,6 +484,91 @@ code {
   margin-bottom: 24px;
 }
 
+/* Select dropdown styles */
+.form-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--text-primary);
+  font-size: 16px;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 3px rgba(188, 155, 243, 0.1);
+}
+
+.form-select:hover {
+  border-color: var(--accent-1);
+}
+
+.form-select option {
+  background: var(--background);
+  color: var(--text-primary);
+  padding: 8px;
+}
+
+/* City input container */
+.city-input-container {
+  position: relative;
+}
+
+.city-input-container .form-input {
+  width: 100%;
+}
+
+.city-input-container datalist {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Password input container */
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-container .form-input {
+  padding-right: 50px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radius);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle-btn img {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  transition: var(--transition);
+}
+
+.password-toggle-btn:hover {
+  background: var(--background-alt);
+  color: var(--text-primary);
+}
+
+.password-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .form-label {
   display: block;
   margin-bottom: 8px;
@@ -519,6 +604,13 @@ code {
   color: var(--accent-3);
   font-size: 14px;
   margin-top: 4px;
+}
+
+.form-help {
+  color: var(--text-light);
+  font-size: 12px;
+  margin-top: 4px;
+  font-style: italic;
 }
 
 /* Checkbox group */
