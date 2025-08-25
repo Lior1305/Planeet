@@ -62,24 +62,22 @@ def normalize_venue(venue: Dict) -> Dict:
     """Extract and normalize fields from Google Places venue data."""
     return {
         "name": venue.get("name", "Unknown Venue"),
-        "description": venue.get("description", "Discovered via Google Places API"),
         "venue_type": venue.get("venue_type", "other"),
         "location": venue.get("location", {}),
+        "city": venue.get("city", "Unknown City"),
         "rating": venue.get("rating"),
         "price_range": venue.get("price_range"),
         "opening_hours": venue.get("opening_hours"),
         "contact_info": venue.get("contact_info"),
-        "amenities": venue.get("amenities", []),
-        "images": venue.get("images", []),
-        "links": venue.get("links", []),
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
+        "created_at": datetime.utcnow(),   # ✅ fixed
+        "updated_at": datetime.utcnow()    # ✅ fixed
     }
 
 # --- Save discovered venues directly into Mongo ---
 async def save_discovered_venues_to_db(venues: List[dict]):
     logger.info(f"Starting to save {len(venues)} venues to MongoDB")
     venues_collection = get_venues_collection()
+    time_slots_collection = get_time_slots_collection()
     saved_count = 0
 
     for venue in venues:
@@ -95,11 +93,25 @@ async def save_discovered_venues_to_db(venues: List[dict]):
                 logger.info(f"Venue {venue_data['name']} already exists, skipping")
                 continue
 
-            # Insert into MongoDB
+            # Insert into MongoDB (venues)
             result = venues_collection.insert_one(venue_data)
             saved_count += 1
+            logger.info(f"Saved venue: {venue_data['name']} (ID: {result.inserted_id})")
 
-            logger.info(f"✅ Saved venue: {venue_data['name']} (ID: {result.inserted_id})")
+            # --- Also insert into time_slots ---
+            time_slot_doc = {
+                "venue_id": str(result.inserted_id),
+                "venue_name": venue_data["name"],
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+                "date": None,
+                "start_time": None,
+                "end_time": None,
+                "capacity": None,
+                "status": "available"
+            }
+            time_slots_collection.insert_one(time_slot_doc)
+            logger.info(f"Created initial time_slot for venue: {venue_data['name']}")
 
         except Exception as e:
             logger.error(f"❌ Failed to save venue {venue.get('name')}: {e}")
@@ -156,62 +168,7 @@ async def generate_venue_plan(plan_request: dict):
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
 
 
-async def save_discovered_venues_to_db(venues: List[dict]):
-    """
-    Save discovered venues from Google Places API to MongoDB
-    """
-    logger.info(f"Starting to save {len(venues)} venues to MongoDB")
-    
-    venues_collection = get_venues_collection()
-    saved_count = 0
-    
-    for venue in venues:
-        try:
-            logger.info(f"Processing venue: {venue.get('name')}")
-            
-            # Check if venue already exists (by name and location)
-            existing_venue = venues_collection.find_one({
-                "name": venue.get("name"),
-                "location.city": venue.get("location", {}).get("city")
-            })
-            
-            if existing_venue:
-                logger.info(f"Venue {venue.get('name')} already exists in database, skipping")
-                continue
-            
-            # Prepare venue data for MongoDB
-            venue_data = {
-                "name": venue.get("name"),
-                "description": venue.get("description", f"Discovered via Google Places API"),
-                "venue_type": venue.get("venue_type"),
-                "location": venue.get("location"),
-                "rating": venue.get("rating"),
-                "price_range": venue.get("price_range"),
-                "opening_hours": venue.get("opening_hours"),
-                "contact_info": venue.get("contact_info"),
-                "amenities": venue.get("amenities", []),
-                "images": venue.get("images", []),
-                "links": venue.get("links", []),
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
-            }
-            
-            logger.info(f"Attempting to insert venue data: {venue_data}")
-            
-            # Insert into MongoDB
-            result = venues_collection.insert_one(venue_data)
-            venue_data["_id"] = result.inserted_id
-            saved_count += 1
-            
-            logger.info(f"Successfully saved venue to MongoDB: {venue.get('name')} (ID: {result.inserted_id})")
-            
-        except Exception as e:
-            logger.error(f"Failed to save venue {venue.get('name')} to MongoDB: {e}")
-            logger.error(f"Error details: {str(e)}")
-            continue
-    
-    logger.info(f"Successfully saved {saved_count} new venues to MongoDB")
-    return saved_count
+
 
 
 
