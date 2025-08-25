@@ -1,0 +1,14 @@
+# Use nginx to serve the React build
+FROM nginx:alpine
+
+# Copy the React build output
+COPY build/ /usr/share/nginx/html/
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
