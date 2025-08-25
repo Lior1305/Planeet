@@ -10,6 +10,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -75,16 +76,32 @@ const Login = () => {
 
         <div className="form-group">
           <label htmlFor="password" className="form-label">Password</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            className="form-input"
-            value={formData.password}
-            onChange={handleInputChange}
-            required
-            disabled={isLoading}
-          />
+          <div className="password-input-container">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              name="password"
+              className="form-input"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              className="password-toggle-btn"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={isLoading}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              <img 
+                src={showPassword ? "/images/hidden.png" : "/images/eye.png"} 
+                alt={showPassword ? "Hide password" : "Show password"}
+                width="20" 
+                height="20"
+              />
+            </button>
+          </div>
         </div>
 
         {error && (

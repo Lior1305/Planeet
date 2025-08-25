@@ -484,6 +484,48 @@ code {
   margin-bottom: 24px;
 }
 
+/* Password input container */
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-container .form-input {
+  padding-right: 50px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radius);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle-btn img {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  transition: var(--transition);
+}
+
+.password-toggle-btn:hover {
+  background: var(--background-alt);
+  color: var(--text-primary);
+}
+
+.password-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .form-label {
   display: block;
   margin-bottom: 8px;
