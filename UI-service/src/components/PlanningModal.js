@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import planningService from '../services/planningService.js';
 import userService from '../services/userService.js';
+import outingProfileService from '../services/outingProfileService.js';
 import GeneratedPlansModal from './GeneratedPlansModal.js';
 
 const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
@@ -208,11 +209,24 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
     }
   };
 
-  const handlePlanSelection = (selectedPlan) => {
-    // Close modal and notify parent with the selected plan
-    onClose();
-    if (onPlanCreated) {
-      onPlanCreated(selectedPlan);
+  const handlePlanSelection = async (selectedPlan) => {
+    try {
+      // Save the chosen plan to the outing profile service
+      const outingData = outingProfileService.formatOutingData(selectedPlan, formData, currentUser?.id);
+      await outingProfileService.addOutingToHistory(outingData);
+      
+      // Show success message (you can add a toast notification here later)
+      console.log('Plan saved to outing history successfully!');
+      
+      // Close modal and notify parent with the selected plan
+      onClose();
+      if (onPlanCreated) {
+        onPlanCreated(selectedPlan);
+      }
+    } catch (error) {
+      console.error('Error saving plan to outing history:', error);
+      // You can add error handling here (show error message to user)
+      setError('Failed to save plan to history. Please try again.');
     }
   };
 
