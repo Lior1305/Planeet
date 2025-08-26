@@ -58,7 +58,7 @@ const Home = () => {
           <article className="feature-card fc-3">
             <div className="fc-icon">🎯</div>
             <h3>Smart matching</h3>
-            <p>AI-powered recommendations based on your preferences and group size.</p>
+            <p>Personalized venue suggestions based on your preferences, budget, and group size.</p>
           </article>
           <article className="feature-card fc-4">
             <div className="fc-icon">❤️</div>
