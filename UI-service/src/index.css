@@ -785,6 +785,12 @@ code {
   color: var(--text-primary);
 }
 
+.btn-outline {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .container {

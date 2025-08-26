@@ -79,6 +79,31 @@ class OutingProfileService {
     }
   }
 
+  async deleteOuting(planId, userId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/outing-history/${planId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: userId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Outing profile service error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Outing deleted successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error deleting outing:', error);
+      throw error;
+    }
+  }
+
   // Helper method to format outing data for the outing profile service
   formatOutingData(selectedPlan, formData, userId) {
     return {

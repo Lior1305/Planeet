@@ -41,6 +41,17 @@ const OutingHistory = () => {
     }
   };
 
+  const deleteOuting = async (planId, userId) => {
+    try {
+      await outingProfileService.deleteOuting(planId, userId);
+      // Reload the history to reflect the change
+      await loadOutingHistory();
+    } catch (error) {
+      console.error('Error deleting outing:', error);
+      setError('Failed to delete outing. Please try again.');
+    }
+  };
+
   const formatDate = (dateString) => {
     try {
       const date = new Date(dateString);
@@ -166,6 +177,15 @@ const OutingHistory = () => {
                     >
                       {outing.status === 'cancelled' ? 'Cancelled' : 'Cancel'}
                     </button>
+                    {outing.status === 'cancelled' && (
+                      <button
+                        onClick={() => deleteOuting(outing.plan_id, currentUser.id)}
+                        className="btn btn-outline btn-sm"
+                        title="Delete this cancelled outing"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -206,6 +226,16 @@ const OutingHistory = () => {
                         </span>
                       ))}
                     </div>
+                  </div>
+
+                  <div className="outing-actions">
+                    <button
+                      onClick={() => deleteOuting(outing.plan_id, currentUser.id)}
+                      className="btn btn-outline btn-sm"
+                      title="Delete this past outing"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}

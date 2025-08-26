@@ -275,6 +275,36 @@ def update_outing_status(plan_id):
             
     except Exception as e:
         logger.error(f"Error updating outing status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/outing-history/<plan_id>', methods=['DELETE'])
+def delete_outing(plan_id):
+    """Delete an outing from the user's profile"""
+    try:
+        data = request.get_json()
+        user_id = data.get("user_id")
+        
+        if not user_id:
+            logger.warning("Missing user_id in request")
+            return jsonify({"error": "user_id is required"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Remove the specific outing from the user's profile
+        result = profiles_collection.update_one(
+            {"user_id": user_id},
+            {"$pull": {"outing_history": {"plan_id": plan_id}}}
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"Outing deleted for plan_id: {plan_id} and user_id: {user_id}")
+            return jsonify({"message": "Outing deleted successfully"}), 200
+        else:
+            logger.warning(f"Outing not found for plan_id: {plan_id} and user_id: {user_id}")
+            return jsonify({"error": "Outing not found"}), 404
+            
+    except Exception as e:
+        logger.error(f"Error deleting outing: {e}")
         return jsonify({"error": str(e)}), 500 
 
 @api.route('/outing-history/update-expired', methods=['POST'])
