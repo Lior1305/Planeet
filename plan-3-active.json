@@ -1,0 +1,21 @@
+{
+  "user_id": "active-user-003",
+  "plan_id": "active-plan-003",
+  "venue_types": ["sports_facility", "bar", "hotel"],
+  "location": {
+    "latitude": 52.3676,
+    "longitude": 4.9041,
+    "city": "Amsterdam",
+    "country": "Netherlands"
+  },
+  "radius_km": 4.5,
+  "date": "2025-08-28T18:00:00",
+  "duration_hours": 5.0,
+  "group_size": 2,
+  "budget_range": "$$",
+  "min_rating": 4.0,
+  "amenities": ["wifi", "parking"],
+  "use_personalization": false,
+  "max_venues": 4,
+  "include_links": true
+} 

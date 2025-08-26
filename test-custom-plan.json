@@ -1,0 +1,21 @@
+{
+  "user_id": "custom-user-456",
+  "plan_id": "custom-plan-789",
+  "venue_types": ["museum", "theater", "restaurant"],
+  "location": {
+    "latitude": 52.3676,
+    "longitude": 4.9041,
+    "city": "Amsterdam",
+    "country": "Netherlands"
+  },
+  "radius_km": 3.0,
+  "date": "2025-08-26T18:00:00",
+  "duration_hours": 6.0,
+  "group_size": 4,
+  "budget_range": "$$$",
+  "min_rating": 4.5,
+  "amenities": ["parking", "wheelchair_accessible", "wifi"],
+  "use_personalization": true,
+  "max_venues": 4,
+  "include_links": true
+}

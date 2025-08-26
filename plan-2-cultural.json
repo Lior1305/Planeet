@@ -1,0 +1,21 @@
+{
+  "user_id": "cultural-user-002",
+  "plan_id": "cultural-plan-002",
+  "venue_types": ["museum", "theater", "shopping_center"],
+  "location": {
+    "latitude": 52.3676,
+    "longitude": 4.9041,
+    "city": "Amsterdam",
+    "country": "Netherlands"
+  },
+  "radius_km": 3.5,
+  "date": "2025-08-28T16:00:00",
+  "duration_hours": 7.0,
+  "group_size": 4,
+  "budget_range": "$$$",
+  "min_rating": 4.2,
+  "amenities": ["wheelchair_accessible", "parking"],
+  "use_personalization": true,
+  "max_venues": 6,
+  "include_links": true
+} 

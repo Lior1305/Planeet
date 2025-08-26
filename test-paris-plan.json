@@ -1,0 +1,21 @@
+{
+  "user_id": "travel-user-789",
+  "plan_id": "travel-plan-101",
+  "venue_types": ["restaurant", "cafe", "shopping_center"],
+  "location": {
+    "latitude": 48.8566,
+    "longitude": 2.3522,
+    "city": "Paris",
+    "country": "France"
+  },
+  "radius_km": 4.0,
+  "date": "2025-08-27T12:00:00",
+  "duration_hours": 5.0,
+  "group_size": 3,
+  "budget_range": "$$",
+  "min_rating": 4.0,
+  "amenities": ["wifi", "parking"],
+  "use_personalization": false,
+  "max_venues": 6,
+  "include_links": true
+} 

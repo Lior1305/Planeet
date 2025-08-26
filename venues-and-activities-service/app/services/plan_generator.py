@@ -2,7 +2,7 @@
 Plan generation service for creating comprehensive venue plans
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 import uuid
 import logging
@@ -11,9 +11,8 @@ from app.models.schemas import Venue, UserPreferences, VenueType, Location, Venu
 from app.services.personalization import personalization_service
 from app.services.planning_integration import planning_integration
 from app.services.planning_service_client import planning_service_client
-from app.services.place_finder import search_places, get_place_details, geocode_address
-from app.services.ontopo_scraper import get_reservation_link
-from app.core.config import VENUES_PER_TYPE, MAX_TOTAL_VENUES
+from app.services.place_finder import search_places, get_place_details
+from app.core.config import VENUES_PER_TYPE
 
 logger = logging.getLogger(__name__)
 
@@ -82,31 +81,19 @@ class PlanGenerator:
             # Generate multiple plans with different venue type combinations
             all_plans = await self._generate_multiple_plans(venues_by_type, max_venues, plan_request)
             
-            # Create comprehensive response
-            plan_response = {
-                "plan_id": plan_id,
-                "user_id": user_id,
+            # Create the final response
+            response = {
+                "plan_id": plan_request.get("plan_id"),
+                "user_id": plan_request.get("user_id"),
                 "total_plans_generated": len(all_plans),
                 "plans": all_plans,
                 "total_venues_found": total_venues_found,
-                "venues_by_type": venues_by_type,  # Show all discovered venues organized by type
-                "search_criteria_used": {
-                    "venue_types": venue_types,
-                    "location": location,
-                    "radius_km": radius_km,
-                    "max_venues": max_venues,
-                    "venues_per_type": VENUES_PER_TYPE,
-                    "use_personalization": use_personalization
-                },
                 "generated_at": datetime.utcnow().isoformat(),
                 "status": "completed",
                 "message": f"Successfully generated {len(all_plans)} plans with {max_venues} venues each from {len(venue_types)} categories"
             }
             
-            # Notify completion
-            await planning_service_client.notify_plan_completion(plan_id, len(all_plans))
-            
-            return plan_response
+            return response
             
         except Exception as e:
             logger.error(f"Error generating plan: {e}")
@@ -358,479 +345,137 @@ class PlanGenerator:
                 amenities.append(type_to_amenity[place_type])
         
         return amenities
-    
-    async def _create_venue_suggestions(
-        self, 
-        venues: List[Venue], 
-        plan_request: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Create venue suggestions with additional planning data"""
-        suggestions = []
-        
-        for i, venue in enumerate(venues):
-            # Calculate travel time from previous venue
-            travel_time = 0
-            if i > 0:
-                travel_time = self._estimate_travel_time(venues[i-1], venue)
-            
-            suggestion = {
-                "venue_id": venue.id,
-                "name": venue.name,
-                "venue_type": venue.venue_type.value,
-                "location": {
-                    "latitude": venue.location.latitude,
-                    "longitude": venue.location.longitude,
-                    "address": venue.location.address,
-                    "city": venue.location.city,
-                    "country": venue.location.country
-                },
-                "rating": venue.rating,
-                "price_range": venue.price_range,
-                "amenities": venue.amenities,
-                "links": self._format_venue_links(venue.links),
-                "personalization_score": getattr(venue, 'personalization_score', None),
-                "travel_time_from_previous": travel_time
-            }
-            
-            suggestions.append(suggestion)
-        
-        return suggestions
-    
-    def _format_venue_links(self, links) -> List[Dict[str, str]]:
-        """Format venue links for the response"""
-        if not links:
-            return []
-        
-        formatted_links = []
-        for link in links:
-            formatted_links.append({
-                "type": link.type,
-                "url": link.url,
-                "title": link.title or link.type,
-                "description": link.description
-            })
-        
-        return formatted_links
-    
-    def _estimate_travel_time(self, venue1: Venue, venue2: Venue) -> float:
-        """Estimate travel time between two venues in minutes"""
-        # Simple estimation - in real implementation, you'd use a mapping service
-        # For now, using a basic calculation based on distance
-        
-        from app.api.routes import calculate_distance
-        
-        distance = calculate_distance(
-            venue1.location.latitude, venue1.location.longitude,
-            venue2.location.latitude, venue2.location.longitude
-        )
-        
-        # Assume average speed of 30 km/h in city
-        # Convert to minutes
-        travel_time_hours = distance / 30.0
-        return travel_time_hours * 60.0
-    
-    def _calculate_total_duration(self, venue_suggestions: List[Dict[str, Any]], plan_request: Dict[str, Any]) -> Optional[float]:
-        """Calculate total estimated duration for the plan"""
-        # Base duration per venue (varies by type)
-        venue_durations = {
-            "restaurant": 1.5,  # hours
-            "cafe": 0.75,
-            "bar": 2.0,
-            "museum": 2.0,
-            "theater": 2.5,
-            "park": 1.0,
-            "shopping_center": 1.5,
-            "sports_facility": 1.5,
-            "hotel": 0.0,  # Just visiting
-            "other": 1.0
-        }
-        
-        total_duration = 0
-        for suggestion in venue_suggestions:
-            venue_type = suggestion.get("venue_type", "other")
-            duration = venue_durations.get(venue_type, 1.0)
-            total_duration += duration
-        
-        # Add travel time
-        travel_times = [s.get("travel_time_from_previous", 0) for s in venue_suggestions[1:]]
-        total_travel_time = sum(travel_times) / 60.0  # Convert minutes to hours
-        
-        return total_duration + total_travel_time
-    
-    def _generate_travel_route(self, venue_suggestions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Generate travel route between venues"""
-        if len(venue_suggestions) < 2:
-            return []
-        
-        route = []
-        for i in range(len(venue_suggestions) - 1):
-            current = venue_suggestions[i]
-            next_venue = venue_suggestions[i + 1]
-            
-            route_segment = {
-                "from_venue": current["name"],
-                "to_venue": next_venue["name"],
-                "travel_time_minutes": next_venue.get("travel_time_from_previous", 0),
-                "from_location": current["location"],
-                "to_location": next_venue["location"]
-            }
-            
-            route.append(route_segment)
-        
-        return route
-    
-    def _calculate_average_score(self, venues: List[Venue], user_preferences: Optional[UserPreferences]) -> Optional[float]:
-        """Calculate average personalization score"""
-        if not user_preferences or not venues:
-            return None
-        
-        scores = []
-        for venue in venues:
-            score = personalization_service.calculate_personalization_score(venue, user_preferences)
-            scores.append(score)
-        
-        return sum(scores) / len(scores) if scores else None
-
-    def _select_balanced_venues(self, venues_by_type: Dict[str, List[Venue]], max_venues: int) -> List[Venue]:
-        """
-        Select a balanced number of venues from each type to meet max_venues.
-        Ensures representation from each venue type when possible.
-        """
-        selected_venues = []
-        venue_types = list(venues_by_type.keys())
-        
-        if not venue_types:
-            return selected_venues
-        
-        # Calculate how many venues to take from each type
-        venues_per_type = max(1, max_venues // len(venue_types))
-        remaining_venues = max_venues % len(venue_types)
-        
-        logger.info(f"Selecting venues: {venues_per_type} per type, {remaining_venues} extra")
-        
-        for i, venue_type in enumerate(venue_types):
-            venues_for_type = venues_by_type[venue_type]
-            
-            # Take venues_per_type from this type, plus one extra if we have remaining_venues
-            extra = 1 if i < remaining_venues else 0
-            venues_to_take = min(venues_per_type + extra, len(venues_for_type))
-            
-            if venues_to_take > 0:
-                selected_from_type = venues_for_type[:venues_to_take]
-                selected_venues.extend(selected_from_type)
-                logger.info(f"Selected {len(selected_from_type)} venues from {venue_type}")
-        
-        # If we still have room and venues available, add more from types with higher ratings
-        if len(selected_venues) < max_venues:
-            remaining_needed = max_venues - len(selected_venues)
-            logger.info(f"Adding {remaining_needed} more venues from highest-rated options")
-            
-            # Get all unselected venues and sort by rating
-            all_unselected = []
-            for venue_type, venues in venues_by_type.items():
-                already_selected = len([v for v in selected_venues if v.venue_type == venue_type])
-                unselected = venues[already_selected:]
-                all_unselected.extend(unselected)
-            
-            # Sort by rating (highest first) and take remaining needed
-            all_unselected.sort(key=lambda v: v.rating or 0, reverse=True)
-            additional_venues = all_unselected[:remaining_needed]
-            selected_venues.extend(additional_venues)
-            
-            logger.info(f"Added {len(additional_venues)} additional venues")
-        
-        logger.info(f"Final selection: {len(selected_venues)} venues from {len(venue_types)} types")
-        return selected_venues
 
     async def _generate_multiple_plans(self, venues_by_type: Dict[str, List[Venue]], max_venues: int, plan_request: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Generate multiple venue plans with different combinations of venue types.
-        Each plan will have exactly max_venues venues from different venue types.
-        IMPORTANT: Each venue will appear in only ONE plan to ensure variety.
+        Generate exactly 3 different venue plans with balanced venue types.
         
-        NEW APPROACH: Geographic + Balance Strategy
-        - Groups venue types that work well together geographically
-        - Ensures balanced experiences across plans
-        - Creates practical, enjoyable outing combinations
+        Requirements:
+        1. Each plan has different venue types (balanced distribution)
+        2. Each plan has different specific venues (no duplicates across plans)
+        3. Max venues ≤ Number of venue types selected
+        4. Balanced venue type distribution in each plan
         """
-        import itertools
-        
         all_plans = []
         venue_types = list(venues_by_type.keys())
         
         # Track which venues have been used to avoid duplicates across plans
         used_venues = set()
         
-        # NEW: Geographic + Balance Strategy
-        # Define venue type groups that work well together geographically
-        
-        if max_venues == 1:
-            # Single venue plans - each plan has one venue from a different type
-            for i in range(min(3, len(venue_types))):
-                venue_type = venue_types[i]
-                # Find the first unused venue of this type
+        # Always create exactly 3 plans with balanced venue types
+        for plan_index in range(3):
+            venues_for_plan = []
+            types_used = []
+            
+            # Simple approach: use different venue types for each plan
+            if plan_index == 0:
+                # First plan: use first max_venues types
+                selected_types = venue_types[:max_venues]
+            elif plan_index == 1:
+                # Second plan: use middle max_venues types
+                start = (len(venue_types) - max_venues) // 2
+                selected_types = venue_types[start:start + max_venues]
+            else:
+                # Third plan: use last max_venues types
+                selected_types = venue_types[-max_venues:]
+            
+            # Get venues for each selected venue type
+            for venue_type in selected_types:
+                # Find unused venues of this type
                 available_venues = [v for v in venues_by_type[venue_type] if v.id not in used_venues]
                 if available_venues:
-                    venues_for_type = [available_venues[0]]  # Take first unused venue
-                    used_venues.add(available_venues[0].id)  # Mark as used
+                    # Take the first available venue
+                    selected_venue = available_venues[0]
+                    venues_for_plan.append(selected_venue)
+                    used_venues.add(selected_venue.id)
+                    types_used.append(venue_type)
                     
-                    plan = await self._create_single_plan(
-                        venues_for_type, 
-                        [venue_type], 
-                        f"{plan_request.get('plan_id')}-plan{i+1}",
-                        plan_request
-                    )
-                    all_plans.append(plan)
-                
-        elif max_venues == 2:
-            # Two venue plans - Geographic combinations
-            geographic_combinations = self._get_geographic_combinations_2(venue_types)
-            
-            for i, (type1, type2) in enumerate(geographic_combinations):
-                venues_for_plan = []
-                
-                # Get unused venue from type1
-                available_type1 = [v for v in venues_by_type[type1] if v.id not in used_venues]
-                if available_type1:
-                    venues_for_plan.append(available_type1[0])
-                    used_venues.add(available_type1[0].id)
-                
-                # Get unused venue from type2
-                available_type2 = [v for v in venues_by_type[type2] if v.id not in used_venues]
-                if available_type2:
-                    venues_for_plan.append(available_type2[0])
-                    used_venues.add(available_type2[0].id)
-                
-                if len(venues_for_plan) == 2:  # Only create plan if we have both venues
-                    plan = await self._create_single_plan(
-                        venues_for_plan,
-                        [type1, type2],
-                        f"{plan_request.get('plan_id')}-plan{i+1}",
-                        plan_request
-                    )
-                    all_plans.append(plan)
-                
-        elif max_venues == 3:
-            # Three venue plans - Geographic + Balance combinations
-            geographic_combinations = self._get_geographic_combinations_3(venue_types)
-            
-            for i, (type1, type2, type3) in enumerate(geographic_combinations):
-                venues_for_plan = []
-                
-                # Get unused venue from type1
-                available_type1 = [v for v in venues_by_type[type1] if v.id not in used_venues]
-                if available_type1:
-                    venues_for_plan.append(available_type1[0])
-                    used_venues.add(available_type1[0].id)
-                
-                # Get unused venue from type2
-                available_type2 = [v for v in venues_by_type[type2] if v.id not in used_venues]
-                if available_type2:
-                    venues_for_plan.append(available_type2[0])
-                    used_venues.add(available_type2[0].id)
-                
-                # Get unused venue from type3
-                available_type3 = [v for v in venues_by_type[type3] if v.id not in used_venues]
-                if available_type3:
-                    venues_for_plan.append(available_type3[0])
-                    used_venues.add(available_type3[0].id)
-                
-                if len(venues_for_plan) == 3:  # Only create plan if we have all three venues
-                    plan = await self._create_single_plan(
-                        venues_for_plan,
-                        [type1, type2, type3],
-                        f"{plan_request.get('plan_id')}-plan{i+1}",
-                        plan_request
-                    )
-                    all_plans.append(plan)
-                
-        else:
-            # For max_venues > 3, create balanced plans
-            for i in range(3):
-                # Create a plan with max_venues venues, distributed across different types
-                venues_for_plan = []
-                types_used = []
-                
-                # Distribute venues across different types
-                venues_per_type = max_venues // len(venue_types)
-                remaining = max_venues % len(venue_types)
-                
-                for j, venue_type in enumerate(venue_types):
-                    venues_to_take = venues_per_type + (1 if j < remaining else 0)
-                    if venues_to_take > 0:
-                        # Get unused venues from this type
-                        available_venues = [v for v in venues_by_type[venue_type] if v.id not in used_venues]
-                        venues_to_add = min(venues_to_take, len(available_venues))
-                        
-                        for k in range(venues_to_add):
-                            venues_for_plan.append(available_venues[k])
-                            used_venues.add(available_venues[k].id)
-                        
-                        if venues_to_add > 0:
-                            types_used.append(venue_type)
-                
-                if len(venues_for_plan) > 0:  # Only create plan if we have venues
-                    plan = await self._create_single_plan(
-                        venues_for_plan,
-                        types_used,
-                        f"{plan_request.get('plan_id')}-plan{i+1}",
-                        plan_request
-                    )
-                    all_plans.append(plan)
-        
-        # Ensure we always return exactly 3 plans
-        while len(all_plans) < 3:
-            # Create additional plans if needed, using remaining unused venues
-            plan_id = f"{plan_request.get('plan_id')}-plan{len(all_plans)+1}"
-            
-            # Find any unused venues from any type
-            additional_venues = []
-            for venue_type, venues in venues_by_type.items():
-                unused = [v for v in venues if v.id not in used_venues]
-                if unused:
-                    additional_venues.append(unused[0])
-                    used_venues.add(unused[0].id)
-                    if len(additional_venues) >= max_venues:
+                    # If we've reached max_venues, stop adding more
+                    if len(venues_for_plan) >= max_venues:
                         break
             
-            if additional_venues:
-                additional_plan = await self._create_single_plan(
-                    additional_venues,
-                    [v.venue_type.value for v in additional_venues],
-                    plan_id,
+            # Create the plan if we have venues
+            if venues_for_plan:
+                plan = await self._create_single_plan(
+                    venues_for_plan,
+                    types_used,
+                    f"{plan_request.get('plan_id')}-plan{plan_index+1}",
                     plan_request
                 )
-                all_plans.append(additional_plan)
+                all_plans.append(plan)
+        
+        # If we don't have 3 plans yet, create additional plans with remaining venues
+        while len(all_plans) < 3:
+            plan_index = len(all_plans)
+            venues_for_plan = []
+            types_used = []
+            
+            # Try to create a plan with remaining unused venues
+            for venue_type, venues in venues_by_type.items():
+                unused = [v for v in venues if v.id not in used_venues]
+                if unused and len(venues_for_plan) < max_venues:
+                    selected_venue = unused[0]
+                    venues_for_plan.append(selected_venue)
+                    used_venues.add(selected_venue.id)
+                    types_used.append(venue_type)
+            
+            if venues_for_plan:
+                plan = await self._create_single_plan(
+                    venues_for_plan,
+                    types_used,
+                    f"{plan_request.get('plan_id')}-plan{plan_index+1}",
+                    plan_request
+                )
+                all_plans.append(plan)
             else:
                 # If no more unused venues, break to avoid infinite loop
                 break
         
         return all_plans[:3]  # Return exactly 3 plans
-    
-    def _get_geographic_combinations_2(self, venue_types: List[str]) -> List[tuple]:
-        """
-        Get geographic combinations for 2-venue plans.
-        Groups venue types that work well together geographically.
-        """
-        # Define which venue types work well together geographically
-        geographic_pairs = [
-            # Food & Dining (often in same areas)
-            ("restaurant", "cafe"),
-            ("restaurant", "bar"),
-            ("cafe", "bar"),
-            
-            # Entertainment District
-            ("bar", "theater"),
-            ("theater", "cafe"),
-            
-            # Outdoor & Relaxation
-            ("park", "cafe"),
-            ("park", "restaurant"),
-            
-            # Nightlife
-            ("bar", "theater"),
-            ("restaurant", "theater"),
-        ]
-        
-        # Filter to only include pairs where both types are requested
-        available_pairs = []
-        for type1, type2 in geographic_pairs:
-            if type1 in venue_types and type2 in venue_types:
-                available_pairs.append((type1, type2))
-        
-        # If we don't have enough geographic pairs, create balanced combinations
-        if len(available_pairs) < 3:
-            # Fallback to balanced combinations
-            available_pairs = [
-                (venue_types[0], venue_types[1]),
-                (venue_types[1], venue_types[2]) if len(venue_types) > 2 else (venue_types[0], venue_types[1]),
-                (venue_types[0], venue_types[2]) if len(venue_types) > 2 else (venue_types[0], venue_types[1])
-            ]
-        
-        return available_pairs[:3]  # Return exactly 3 combinations
-    
-    def _get_geographic_combinations_3(self, venue_types: List[str]) -> List[tuple]:
-        """
-        Get geographic combinations for 3-venue plans.
-        Groups venue types that work well together geographically.
-        """
-        # Define which venue types work well together geographically
-        geographic_trios = [
-            # Food & Entertainment District
-            ("restaurant", "cafe", "theater"),  # Dinner → Coffee → Movie
-            ("bar", "restaurant", "cafe"),      # Drinks → Dinner → Coffee
-            
-            # Nightlife Experience
-            ("bar", "theater", "cafe"),         # Pre-drinks → Show → After-party
-            
-            # Day Out Experience
-            ("park", "restaurant", "cafe"),     # Walk → Lunch → Coffee
-            
-            # Cultural Experience
-            ("museum", "restaurant", "cafe"),   # Culture → Dinner → Coffee
-            ("theater", "restaurant", "bar"),   # Show → Dinner → Drinks
-        ]
-        
-        # Filter to only include trios where all types are requested
-        available_trios = []
-        for type1, type2, type3 in geographic_trios:
-            if type1 in venue_types and type2 in venue_types and type3 in venue_types:
-                available_trios.append((type1, type2, type3))
-        
-        # If we don't have enough geographic trios, create balanced combinations
-        if len(available_trios) < 3:
-            # Fallback to balanced combinations
-            if len(venue_types) >= 3:
-                available_trios = [
-                    (venue_types[0], venue_types[1], venue_types[2]),
-                    (venue_types[1], venue_types[2], venue_types[3]) if len(venue_types) > 3 else (venue_types[0], venue_types[1], venue_types[2]),
-                    (venue_types[0], venue_types[2], venue_types[3]) if len(venue_types) > 3 else (venue_types[0], venue_types[1], venue_types[2])
-                ]
-            else:
-                # If we have fewer venue types, create plans with multiple venues from same type
-                available_trios = [
-                    (venue_types[0], venue_types[0], venue_types[0]),
-                    (venue_types[0], venue_types[0], venue_types[1]) if len(venue_types) > 1 else (venue_types[0], venue_types[0], venue_types[0]),
-                    (venue_types[0], venue_types[1], venue_types[1]) if len(venue_types) > 1 else (venue_types[0], venue_types[0], venue_types[0])
-                ]
-        
-        return available_trios[:3]  # Return exactly 3 combinations
-    
+
     async def _create_single_plan(self, venues: List[Venue], venue_types: List[str], plan_id: str, plan_request: Dict[str, Any]) -> Dict[str, Any]:
         """Helper method to create a single plan with the given venues"""
-        # Generate venue suggestions with additional data
-        venue_suggestions = await self._create_venue_suggestions(venues, plan_request)
+        # Calculate total duration (assuming 1 hour per venue + travel time)
+        total_duration = len(venues) * 1.0  # Base duration per venue
         
-        # Calculate plan metrics
-        total_duration = self._calculate_total_duration(venue_suggestions, plan_request)
-        travel_route = self._generate_travel_route(venue_suggestions)
+        # Create simplified venue structure with only essential fields
+        simplified_venues = []
+        for i, venue in enumerate(venues):
+            # Get the first website link if available, otherwise null
+            url_link = None
+            if venue.links and len(venue.links) > 0:
+                url_link = venue.links[0].get('url') if hasattr(venue.links[0], 'get') else venue.links[0].url
+            
+            simplified_venue = {
+                "venue_id": venue.id,
+                "name": venue.name,
+                "venue_type": venue.venue_type.value,
+                "location": {
+                    "latitude": venue.location.latitude,
+                    "longitude": venue.location.longitude
+                },
+                "rating": venue.rating,
+                "price_range": venue.price_range,
+                "amenities": venue.amenities or [],
+                "address": venue.location.address,
+                "url_link": url_link
+            }
+            simplified_venues.append(simplified_venue)
         
-        # Create plan response
-        plan_response = {
+        # Create simplified plan structure
+        plan = {
             "plan_id": plan_id,
-            "user_id": plan_request.get("user_id"),
-            "suggested_venues": venue_suggestions,
-            "total_venues_found": len(venues),
+            "user_id": plan_request.get('user_id'),
+            "suggested_venues": simplified_venues,
             "venue_types_included": venue_types,
-            "venues_list": venues,
             "estimated_total_duration": total_duration,
-            "travel_route": travel_route,
-            "personalization_applied": False,
-            "average_personalization_score": None,
-            "search_criteria_used": {
-                "venue_types": venue_types,
-                "location": plan_request.get("location"),
-                "radius_km": plan_request.get("radius_km"),
-                "max_venues": len(venues),
-                "venues_per_type": VENUES_PER_TYPE,
-                "use_personalization": False
-            },
+            "personalization_applied": plan_request.get('use_personalization', False),
             "generated_at": datetime.utcnow().isoformat(),
             "status": "completed",
             "message": f"Plan with {len(venues)} venues from {len(venue_types)} venue types"
         }
         
-        return plan_response
+        return plan
 
 # Global instance
 plan_generator = PlanGenerator() 
