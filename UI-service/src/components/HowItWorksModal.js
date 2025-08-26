@@ -7,27 +7,27 @@ const HowItWorksModal = ({ isOpen, onClose }) => {
     {
       icon: '🔐',
       title: 'Create Your Account',
-      description: 'Sign up or log in to your Planeet account to get started with planning your perfect outing.'
+      description: 'Sign up or log in to your Planeet account and start planning your perfect outing.'
     },
     {
       icon: '🎯',
       title: 'Set Your Preferences',
-      description: 'Tell us about your preferences - cuisine type, budget, group size, and any special requirements.'
+      description: 'Tell us what you like—cuisine, budget, group size, and any special requests.'
     },
     {
       icon: '📋',
-      title: 'Choose Your Plan',
-      description: 'Browse through our AI-generated suggestions and pick the perfect plan that matches your preferences.'
+      title: 'Pick a Plan',
+      description: 'Browse the 3 personalized plans we create for you, or regenerate until you find the perfect match.'
     },
     {
       icon: '🎉',
       title: 'Book & Enjoy',
-      description: 'Reserve your venues and enjoy an amazing night out with friends and family!'
+      description: 'Reserve your spots and get ready for a fun, stress-free night out with friends or family.'
     },
     {
       icon: '⭐',
-      title: 'Rate & Improve',
-      description: 'Share your experience by rating venues and providing feedback to help us serve you better next time.'
+      title: 'Share Feedback',
+      description: 'Rate your experience and leave feedback so we can make your next outing even better.'
     }
   ];
 

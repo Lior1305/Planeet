@@ -26,7 +26,7 @@ code {
   --primary: #6366f1;
   --primary-dark: #4f46e5;
   --primary-light: #a5b4fc;
-  --accent-1: #f59e0b;
+  --accent-1: #b9d440;
   --accent-2: #10b981;
   --accent-3: #ef4444;
   --accent-4: #8b5cf6;
@@ -78,7 +78,7 @@ code {
 }
 
 .btn-primary:hover {
-  background: #b9d440;
+  background: var(--accent-1);
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
 }
