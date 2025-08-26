@@ -30,7 +30,22 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
         const updatedVenueTypes = checked
           ? [...formData.venueTypes, value]
           : formData.venueTypes.filter(type => type !== value);
-        setFormData(prev => ({ ...prev, venueTypes: updatedVenueTypes }));
+        
+        setFormData(prev => {
+          const newVenueTypes = updatedVenueTypes;
+          let newMaxVenues = prev.maxVenues;
+          
+          // Adjust maxVenues if it exceeds the new venue types count
+          if (newMaxVenues > newVenueTypes.length) {
+            newMaxVenues = Math.max(1, newVenueTypes.length);
+          }
+          
+          return { 
+            ...prev, 
+            venueTypes: newVenueTypes,
+            maxVenues: newMaxVenues
+          };
+        });
       }
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
@@ -124,16 +139,20 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
           return false;
         }
         break;
-      case 5:
-        if (formData.radiusKm < 1) {
-          setError('Radius must be at least 1 km.');
-          return false;
-        }
-        if (formData.maxVenues < 1) {
-          setError('Maximum venues must be at least 1.');
-          return false;
-        }
-        break;
+             case 5:
+         if (formData.radiusKm < 1) {
+           setError('Radius must be at least 1 km.');
+           return false;
+         }
+         if (formData.maxVenues < 1) {
+           setError('Maximum venues must be at least 1.');
+           return false;
+         }
+         if (formData.maxVenues > formData.venueTypes.length) {
+           setError(`Maximum venues cannot exceed the number of selected venue types (${formData.venueTypes.length}).`);
+           return false;
+         }
+         break;
       default:
         break;
     }
@@ -425,20 +444,32 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="maxVenues" className="form-label">Maximum Venues</label>
-                <input
-                  type="number"
-                  id="maxVenues"
-                  name="maxVenues"
-                  className="form-input"
-                  value={formData.maxVenues}
-                  onChange={handleInputChange}
-                  min="1"
-                  max="50"
-                  required
-                />
-              </div>
+                             <div className="form-group">
+                 <label htmlFor="maxVenues" className="form-label">
+                   Maximum Venues
+                                       <span 
+                      className="info-icon" 
+                      title="Maximum venues / activities per generated plan"
+                      data-tooltip="Maximum venues / activities per generated plan"
+                    >
+                      <img src="/images/info.png" alt="Info" />
+                    </span>
+                 </label>
+                 <input
+                   type="number"
+                   id="maxVenues"
+                   name="maxVenues"
+                   className="form-input"
+                   value={formData.maxVenues}
+                   onChange={handleInputChange}
+                   min="1"
+                   max={formData.venueTypes.length || 1}
+                   required
+                 />
+                 <div className="form-help">
+                   Range: 1 - {formData.venueTypes.length || 1} (based on selected venue types)
+                 </div>
+               </div>
             </div>
 
             {/* Step 6: Review */}

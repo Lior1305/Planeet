@@ -66,6 +66,14 @@ class PlanningService {
       return { isValid: false, error: 'Group size must be between 1 and 20.' };
     }
 
+    if (formData.maxVenues < 1) {
+      return { isValid: false, error: 'Maximum venues must be at least 1.' };
+    }
+
+    if (formData.maxVenues > formData.venueTypes.length) {
+      return { isValid: false, error: `Maximum venues cannot exceed the number of selected venue types (${formData.venueTypes.length}).` };
+    }
+
     return { isValid: true };
   }
 
@@ -144,7 +152,7 @@ class PlanningService {
       budgetRange: 'medium',
       minRating: 4.0,
       radiusKm: 5,
-      maxVenues: 10,
+      maxVenues: 1, // Start with 1 since no venue types are selected initially
       dietaryRestrictions: '',
       accessibilityNeeds: '',
       amenities: ''
@@ -168,9 +176,9 @@ class PlanningService {
 
   getBudgetOptions() {
     return [
-      { value: 'low', label: 'Budget-friendly' },
-      { value: 'medium', label: 'Mid-range' },
-      { value: 'high', label: 'Premium' }
+      { value: 'low', label: '$ Budget-friendly' },
+      { value: 'medium', label: '$$ Mid-range' },
+      { value: 'high', label: '$$$ Premium' }
     ];
   }
 }
