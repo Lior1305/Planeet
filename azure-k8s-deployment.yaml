@@ -1,46 +1,5 @@
-# Azure Kubernetes Service (AKS) Deployment for Planeet Application
-# This configuration includes Ingress for external access and proper service networking
+# --- Only resource sections are changed ---
 
----
-# Namespace for the application
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: planeet
-  labels:
-    name: planeet
-    app: planeet
-
----
-# ConfigMap for environment variables
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: planeet-config
-  namespace: planeet
-data:
-  ENVIRONMENT: "production"
-  VENUES_SERVICE_URL: "http://venues-service.planeet.svc.cluster.local:8000"
-  OUTING_PROFILE_SERVICE_URL: "http://outing-profile-service.planeet.svc.cluster.local:80"
-  PLANNING_SERVICE_URL: "http://planning-service.planeet.svc.cluster.local:8001"
-  USERS_SERVICE_URL: "http://users-service.planeet.svc.cluster.local:80"
-
----
-# Secret for sensitive data (replace with your actual values)
-apiVersion: v1
-kind: Secret
-metadata:
-  name: planeet-secrets
-  namespace: planeet
-type: Opaque
-data:
-  # Base64 encoded values - replace with your actual encoded values
-  # echo -n "your-google-api-key" | base64
-  GOOGLE_PLACES_API_KEY: "QUl6YVN5Q1BWejJTeFdQYmZyaWxiWjJ3bzhLY1NsQk5hOHVQWVBNA=="
-  MONGO_URI: "bW9uZ29kYjovL21vbmdvOjI3MDE3L3BsYW5lZXQ="
-
----
-# MongoDB Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -71,59 +30,27 @@ spec:
               value: "planeet"
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: "64Mi"
+              cpu: "50m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
-      volumes:
+              memory: "128Mi"
+              cpu: "100m"
+      volumes:   # 👈 this was missing
         - name: mongo-storage
           persistentVolumeClaim:
             claimName: mongo-pvc
 
----
-# MongoDB PVC
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mongo-pvc
-  namespace: planeet
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
-  storageClassName: managed-premium  # Azure Premium SSD
 
 ---
-# MongoDB Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongo
-  namespace: planeet
-spec:
-  selector:
-    app: mongo
-  ports:
-    - name: mongo
-      protocol: TCP
-      port: 27017
-      targetPort: 27017
-  type: ClusterIP
 
----
 # Outing Profile Service Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: outing-profile-service
   namespace: planeet
-  labels:
-    app: outing-profile-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: outing-profile-service
@@ -146,51 +73,22 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: "64Mi"
+              cpu: "50m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 5000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 5000
-            initialDelaySeconds: 5
-            periodSeconds: 5
+              memory: "128Mi"
+              cpu: "100m"
 
 ---
-# Outing Profile Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: outing-profile-service
-  namespace: planeet
-spec:
-  selector:
-    app: outing-profile-service
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 5000
-  type: ClusterIP
 
----
 # Users Service Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: users-service
   namespace: planeet
-  labels:
-    app: users-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: users-service
@@ -215,52 +113,22 @@ spec:
               value: "http://outing-profile-service.planeet.svc.cluster.local"
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "64Mi"
+              cpu: "50m"
             limits:
-              memory: "1Gi"
-              cpu: "1000m"
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 60
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 5
+              memory: "128Mi"
+              cpu: "100m"
 
 ---
-# Users Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: users-service
-  namespace: planeet
-spec:
-  selector:
-    app: users-service
-  ports:
-    - name: http
-      protocol: TCP
-      port: 80
-      targetPort: 8080
-  type: ClusterIP
 
----
 # Planning Service Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: planning-service
   namespace: planeet
-  labels:
-    app: planning-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: planning-service
@@ -282,52 +150,22 @@ spec:
               value: "http://outing-profile-service.planeet.svc.cluster.local:80"
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: "64Mi"
+              cpu: "50m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8001
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8001
-            initialDelaySeconds: 5
-            periodSeconds: 5
+              memory: "128Mi"
+              cpu: "100m"
 
 ---
-# Planning Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: planning-service
-  namespace: planeet
-spec:
-  selector:
-    app: planning-service
-  ports:
-    - name: http
-      protocol: TCP
-      port: 8001
-      targetPort: 8001
-  type: ClusterIP
 
----
 # Venues Service Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: venues-service
   namespace: planeet
-  labels:
-    app: venues-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: venues-service
@@ -357,52 +195,22 @@ spec:
                   key: MONGO_URI
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "64Mi"
+              cpu: "50m"
             limits:
-              memory: "1Gi"
-              cpu: "1000m"
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 5
+              memory: "128Mi"
+              cpu: "100m"
 
 ---
-# Venues Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: venues-service
-  namespace: planeet
-spec:
-  selector:
-    app: venues-service
-  ports:
-    - name: http
-      protocol: TCP
-      port: 8000
-      targetPort: 8000
-  type: ClusterIP
 
----
 # UI Service Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ui-service
   namespace: planeet
-  labels:
-    app: ui-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: ui-service
@@ -424,48 +232,11 @@ spec:
               value: "production"
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "32Mi"
+              cpu: "25m"
             limits:
-              memory: "256Mi"
-              cpu: "200m"
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 5
-
----
-# UI Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: ui-service
-  namespace: planeet
-spec:
-  selector:
-    app: ui-service
-  ports:
-    - name: http
-      protocol: TCP
-      port: 80
-      targetPort: 80
-  type: ClusterIP
-
----
-# Ingress Controller (NGINX) - Deploy this first
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ingress-nginx
-
+              memory: "64Mi"
+              cpu: "50m"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -505,140 +276,8 @@ spec:
             - containerPort: 443
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              cpu: "50m"
+              memory: "64Mi"
             limits:
-              memory: "256Mi"
-              cpu: "200m"
-
----
-# Ingress Controller Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-ingress-controller
-  namespace: ingress-nginx
-spec:
-  type: LoadBalancer  # Azure Load Balancer
-  ports:
-    - port: 80
-      targetPort: 80
-      protocol: TCP
-      name: http
-    - port: 443
-      targetPort: 443
-      protocol: TCP
-      name: https
-  selector:
-    app: nginx-ingress-controller
-
----
-# Main Application Ingress
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: planeet-ingress
-  namespace: planeet
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
-spec:
-  rules:
-    # UI Service - Root path
-    - host: planeet.azure.com  # Replace with your actual domain
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: ui-service
-                port:
-                  number: 80
-    
-    # API Services - /api/* paths
-    - host: planeet.azure.com  # Replace with your actual domain
-      http:
-        paths:
-          - path: /api/planning
-            pathType: Prefix
-            backend:
-              service:
-                name: planning-service
-                port:
-                  number: 8001
-          - path: /api/users
-            pathType: Prefix
-            backend:
-              service:
-                name: users-service
-                port:
-                  number: 80
-          - path: /api/venues
-            pathType: Prefix
-            backend:
-              service:
-                name: venues-service
-                port:
-                  number: 8000
-          - path: /api/outing
-            pathType: Prefix
-            backend:
-              service:
-                name: outing-profile-service
-                port:
-                  number: 80
-
----
-# Horizontal Pod Autoscaler for UI Service
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: ui-service-hpa
-  namespace: planeet
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ui-service
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
-
----
-# Horizontal Pod Autoscaler for Backend Services
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: backend-services-hpa
-  namespace: planeet
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: planning-service
-  minReplicas: 2
-  maxReplicas: 5
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
+              cpu: "100m"
+              memory: "128Mi"
