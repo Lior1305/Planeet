@@ -844,3 +844,189 @@ code {
     padding: 20px;
   }
 }
+
+/* Generated Plans Modal specific styles */
+.generated-plans-modal {
+  max-width: 900px;
+  max-height: 90vh;
+}
+
+.plans-summary {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--background-alt);
+  border-radius: var(--radius);
+}
+
+.plans-intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.plans-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.plan-card {
+  background: var(--background);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: var(--transition);
+}
+
+.plan-card:hover {
+  border-color: var(--accent-1);
+  box-shadow: var(--shadow-lg);
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.plan-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.plan-duration,
+.plan-venues {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.venues-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.venue-item {
+  padding: 16px;
+  background: var(--background-alt);
+  border-radius: var(--radius);
+  border-left: 4px solid var(--accent-1);
+}
+
+.venue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.venue-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.venue-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.venue-type-badge {
+  background: var(--primary);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.venue-rating {
+  background: var(--accent-2);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.venue-price {
+  background: var(--accent-1);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.venue-address {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.venue-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.venue-link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+.plan-actions {
+  text-align: center;
+}
+
+/* Responsive adjustments for plans modal */
+@media (max-width: 768px) {
+  .generated-plans-modal {
+    max-width: 95vw;
+    margin: 20px;
+  }
+  
+  .plan-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .venue-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .venue-name {
+    min-width: auto;
+  }
+  
+  .venue-badges {
+    justify-content: flex-start;
+  }
+}

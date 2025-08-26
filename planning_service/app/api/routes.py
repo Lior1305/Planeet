@@ -48,23 +48,8 @@ async def create_plan(plan_request: PlanRequest):
             # Store the complete plan response (contains multiple plans from venues service)
             plan_store[plan_id] = venues_plan_response
             
-            # Return success response with plan summary
-            return {
-                "message": "Multiple plans created successfully by venues service",
-                "plan_id": plan_id,
-                "status": "completed",
-                "total_plans_generated": venues_plan_response.get("total_plans_generated", 0),
-                "total_venues_found": venues_plan_response.get("total_venues_found", 0),
-                "plans_summary": [
-                    {
-                        "plan_id": plan.get("plan_id"),
-                        "venue_types": plan.get("venue_types_included", []),
-                        "venues_count": len(plan.get("suggested_venues", [])),
-                        "estimated_duration": plan.get("estimated_total_duration")
-                    }
-                    for plan in venues_plan_response.get("plans", [])
-                ]
-            }
+            # Return the complete response from venues service (includes full venue details)
+            return venues_plan_response
         else:
             # Plan generation failed
             plan_store[plan_id] = {
