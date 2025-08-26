@@ -13,7 +13,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "React build successful!" -ForegroundColor Green
 
 # Build Docker image
-$IMAGE_TAG = "nikaklimenchuk/planeet-ui:react-v1.8"
+$IMAGE_TAG = "nikaklimenchuk/planeet-ui:react-v1.9.1"
 Write-Host "Building Docker image: $IMAGE_TAG" -ForegroundColor Yellow
 
 docker build -f Dockerfile-React -t $IMAGE_TAG .

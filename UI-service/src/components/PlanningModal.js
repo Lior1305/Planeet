@@ -447,13 +447,13 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
                              <div className="form-group">
                  <label htmlFor="maxVenues" className="form-label">
                    Maximum Venues
-                   <span 
-                     className="info-icon" 
-                     title="Maximum number of venues per place type"
-                     data-tooltip="Maximum number of venues per place type"
-                   >
-                     ℹ️
-                   </span>
+                                       <span 
+                      className="info-icon" 
+                      title="Maximum venues / activities per generated plan"
+                      data-tooltip="Maximum venues / activities per generated plan"
+                    >
+                      <img src="/images/info.png" alt="Info" />
+                    </span>
                  </label>
                  <input
                    type="number"

@@ -176,9 +176,9 @@ class PlanningService {
 
   getBudgetOptions() {
     return [
-      { value: 'low', label: 'Budget-friendly' },
-      { value: 'medium', label: 'Mid-range' },
-      { value: 'high', label: 'Premium' }
+      { value: 'low', label: '$ Budget-friendly' },
+      { value: 'medium', label: '$$ Mid-range' },
+      { value: 'high', label: '$$$ Premium' }
     ];
   }
 }
