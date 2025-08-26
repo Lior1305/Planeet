@@ -44,28 +44,37 @@ async def create_plan(plan_request: PlanRequest):
         venues_plan_response = await venues_service_client.generate_venue_plan(plan_data)
         
         if venues_plan_response:
-            # Store the complete plan
+            # Store the complete plan response (now contains multiple plans)
             plan_store[plan_id] = venues_plan_response
             
-            # Return success response
+            # Return success response with plan summary
             return {
-                "message": "Plan created successfully",
+                "message": "Multiple plans created successfully",
                 "plan_id": plan_id,
                 "status": "completed",
-                "venues_found": venues_plan_response.get("total_venues_found", 0),
-                "estimated_duration": venues_plan_response.get("estimated_total_duration")
+                "total_plans_generated": venues_plan_response.get("total_plans_generated", 0),
+                "total_venues_found": venues_plan_response.get("total_venues_found", 0),
+                "plans_summary": [
+                    {
+                        "plan_id": plan.get("plan_id"),
+                        "venue_types": plan.get("venue_types_included", []),
+                        "venues_count": len(plan.get("suggested_venues", [])),
+                        "estimated_duration": plan.get("estimated_total_duration")
+                    }
+                    for plan in venues_plan_response.get("plans", [])
+                ]
             }
         else:
             # Plan generation failed
             plan_store[plan_id] = {
                 "plan_id": plan_id,
                 "status": "failed",
-                "message": "Failed to generate venue plan"
+                "message": "Failed to generate venue plans"
             }
             
             raise HTTPException(
                 status_code=500, 
-                detail="Failed to generate venue plan"
+                detail="Failed to generate venue plans"
             )
             
     except Exception as e:

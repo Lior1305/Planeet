@@ -1,6 +1,7 @@
 import requests
 
 GOOGLE_API_KEY = "AIzaSyCPVz2SxWPbfrilbZ2wo8KcSlBNa8uPYPM"
+
 def geocode_address(address):
     url = "https://maps.googleapis.com/maps/api/geocode/json"
     params = {"address": address, "key": GOOGLE_API_KEY}
@@ -13,22 +14,61 @@ def geocode_address(address):
         raise Exception(f"Could not geocode the address: {data['status']}")
 
 
-def search_places(lat=None, lng=None, place_type=None, keyword=None, radius=5000):
+def search_places(lat=None, lng=None, place_type=None, keyword=None, radius=5000, max_results=20):
+    """
+    Search for places using Google Places API with support for pagination
+    
+    Args:
+        lat: Latitude
+        lng: Longitude
+        place_type: Google Places API type
+        keyword: Search keyword
+        radius: Search radius in meters
+        max_results: Maximum number of results to return (default 20, max 60)
+    
+    Returns:
+        List of places up to max_results
+    """
     url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-    params = {
-        "location": f"{lat},{lng}",
-        "radius": radius,
-        "type": place_type,
-        "keyword": keyword,
-        "language": "en",
-        "key": GOOGLE_API_KEY
-    }
-    response = requests.get(url, params=params)
-    data = response.json()
-    if data["status"] != "OK":
-        print("No results or error:", data["status"])
-        return []
-    return data["results"]
+    all_results = []
+    page_token = None
+    
+    while len(all_results) < max_results:
+        params = {
+            "location": f"{lat},{lng}",
+            "radius": radius,
+            "type": place_type,
+            "keyword": keyword,
+            "language": "en",
+            "key": GOOGLE_API_KEY
+        }
+        
+        # Add pageToken if we have one
+        if page_token:
+            params["pagetoken"] = page_token
+        
+        response = requests.get(url, params=params)
+        data = response.json()
+        
+        if data["status"] != "OK":
+            print("No results or error:", data["status"])
+            break
+        
+        # Add results from this page
+        results = data.get("results", [])
+        all_results.extend(results)
+        
+        # Check if there are more pages
+        page_token = data.get("next_page_token")
+        if not page_token:
+            break
+        
+        # Google requires a short delay between page requests
+        import time
+        time.sleep(2)
+    
+    # Return up to max_results
+    return all_results[:max_results]
 
 
 def get_place_details(place_id):
