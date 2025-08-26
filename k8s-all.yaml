@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: outing-profile-service
-          image: nikaklimenchuk/outing-profile-service:v1.7
+          image: nikaklimenchuk/outing-profile-service:v1.9
           ports:
             - containerPort: 5000
           env:
@@ -121,7 +121,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.5
+          image: nikaklimenchuk/planeet-ui:react-v1.9.7
           imagePullPolicy: Always
           ports:
             - containerPort: 80
