@@ -1,0 +1,21 @@
+{
+  "user_id": "test-user-123",
+  "plan_id": "test-plan-3-types",
+  "venue_types": ["restaurant", "cafe", "park"],
+  "location": {
+    "latitude": 52.3676,
+    "longitude": 4.9041,
+    "city": "Amsterdam",
+    "country": "Netherlands"
+  },
+  "radius_km": 5.0,
+  "date": "2025-08-25T14:00:00",
+  "duration_hours": 4.0,
+  "group_size": 2,
+  "budget_range": "$$",
+  "min_rating": 4.0,
+  "amenities": ["parking", "wheelchair_accessible"],
+  "use_personalization": true,
+  "max_venues": 6,
+  "include_links": true
+} 

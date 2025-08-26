@@ -4,6 +4,9 @@ from datetime import datetime
 import uuid
 import logging
 from bson import ObjectId
+from datetime import datetime
+from typing import List, Dict
+
 
 from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
@@ -54,11 +57,76 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     c = 2 * math.asin(math.sqrt(a))
     return R * c
 
+# --- Normalize incoming venue ---
+def normalize_venue(venue: Dict) -> Dict:
+    """Extract and normalize fields from Google Places venue data."""
+    return {
+        "name": venue.get("name", "Unknown Venue"),
+        "venue_type": venue.get("venue_type", "other"),
+        "location": venue.get("location", {}),
+        "city": venue.get("city", "Unknown City"),
+        "rating": venue.get("rating"),
+        "price_range": venue.get("price_range"),
+        "opening_hours": venue.get("opening_hours"),
+        "contact_info": venue.get("contact_info"),
+        "created_at": datetime.utcnow(),   # ✅ fixed
+        "updated_at": datetime.utcnow()    # ✅ fixed
+    }
+
+# --- Save discovered venues directly into Mongo ---
+async def save_discovered_venues_to_db(venues: List[dict]):
+    logger.info(f"Starting to save {len(venues)} venues to MongoDB")
+    venues_collection = get_venues_collection()
+    time_slots_collection = get_time_slots_collection()
+    saved_count = 0
+
+    for venue in venues:
+        try:
+            venue_data = normalize_venue(venue)
+
+            # Avoid duplicates (by name + city)
+            existing = venues_collection.find_one({
+                "name": venue_data["name"],
+                "location.city": venue_data["location"].get("city")
+            })
+            if existing:
+                logger.info(f"Venue {venue_data['name']} already exists, skipping")
+                continue
+
+            # Insert into MongoDB (venues)
+            result = venues_collection.insert_one(venue_data)
+            saved_count += 1
+            logger.info(f"Saved venue: {venue_data['name']} (ID: {result.inserted_id})")
+
+            # --- Also insert into time_slots ---
+            time_slot_doc = {
+                "venue_id": str(result.inserted_id),
+                "venue_name": venue_data["name"],
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+                "date": None,
+                "start_time": None,
+                "end_time": None,
+                "capacity": None,
+                "status": "available"
+            }
+            time_slots_collection.insert_one(time_slot_doc)
+            logger.info(f"Created initial time_slot for venue: {venue_data['name']}")
+
+        except Exception as e:
+            logger.error(f"❌ Failed to save venue {venue.get('name')}: {e}")
+            continue
+
+    logger.info(f"Successfully saved {saved_count} new venues")
+    return saved_count
+
+
+
 # Plan Generation Endpoint (NEW!)
 @router.post("/plans/generate", response_model=dict)
 async def generate_venue_plan(plan_request: dict):
     """
-    Generate a comprehensive venue plan based on Planning Service request
+    Generate a comprehensive venue plan based on Planning Service request.
     
     This endpoint receives plan requests from the Planning Service and returns
     a complete plan with venue suggestions, costs, durations, and travel routes.
@@ -69,18 +137,42 @@ async def generate_venue_plan(plan_request: dict):
         for field in required_fields:
             if field not in plan_request:
                 raise HTTPException(
-                    status_code=400, 
+                    status_code=400,
                     detail=f"Missing required field: {field}"
                 )
-        
-        # Generate the plan
+
+        # Generate the plan (calls Google Places)
+        logger.info("Starting plan generation...")
         plan_response = await plan_generator.generate_plan(plan_request)
-        
+        logger.info(f"Plan generated. Keys: {list(plan_response.keys()) if plan_response else 'None'}")
+
+        # Pick the right key for venues (normalize possible variations)
+        venues_to_save = (
+            plan_response.get("venues")
+            or plan_response.get("suggested_venues")
+            or plan_response.get("venues_list")
+        )
+
+        # Save to Mongo if venues found
+        if venues_to_save:
+            logger.info(f"Discovered {len(venues_to_save)} venues, saving to MongoDB...")
+            await save_discovered_venues_to_db(venues_to_save)
+            logger.info("Save function completed")
+        else:
+            logger.warning("⚠️ No venues found in plan response")
+
         return plan_response
-        
+
     except Exception as e:
         logger.error(f"Error in plan generation endpoint: {e}")
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
+
+
+
+
+
+
+
 
 # Venue endpoints
 @router.post("/venues", response_model=Venue, status_code=status.HTTP_201_CREATED)

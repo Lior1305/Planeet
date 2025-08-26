@@ -248,7 +248,7 @@ spec:
       protocol: TCP
       port: 8001
       targetPort: 8001
-      nodePort: 30001
+      nodePort: 30005
   type: NodePort
 
 ---
@@ -268,7 +268,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v1.4
+          image: dartoledano/venues-service:v1.9
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
