@@ -1,7 +1,7 @@
 {
   "user_id": "test-user-123",
   "plan_id": "test-plan-3-types",
-  "venue_types": ["restaurant", "cafe", "park"],
+  "venue_types": ["cafe", "restaurant", "bar"],
   "location": {
     "latitude": 52.3676,
     "longitude": 4.9041,
@@ -16,6 +16,6 @@
   "min_rating": 4.0,
   "amenities": ["parking", "wheelchair_accessible"],
   "use_personalization": true,
-  "max_venues": 6,
+  "max_venues": 2,
   "include_links": true
 } 

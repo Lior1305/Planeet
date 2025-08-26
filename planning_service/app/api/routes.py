@@ -26,6 +26,7 @@ async def create_plan(plan_request: PlanRequest):
     
     This endpoint receives user input and creates a plan request that will be
     sent to the Venues Service for venue discovery and planning.
+    The Venues Service already creates multiple plans with different venue types.
     """
     try:
         # Generate unique plan ID
@@ -40,16 +41,16 @@ async def create_plan(plan_request: PlanRequest):
         if plan_data.get('date'):
             plan_data['date'] = plan_data['date'].isoformat()
         
-        # Send to Venues Service for plan generation
+        # Send to Venues Service for plan generation (it already creates multiple plans)
         venues_plan_response = await venues_service_client.generate_venue_plan(plan_data)
         
         if venues_plan_response:
-            # Store the complete plan response (now contains multiple plans)
+            # Store the complete plan response (contains multiple plans from venues service)
             plan_store[plan_id] = venues_plan_response
             
             # Return success response with plan summary
             return {
-                "message": "Multiple plans created successfully",
+                "message": "Multiple plans created successfully by venues service",
                 "plan_id": plan_id,
                 "status": "completed",
                 "total_plans_generated": venues_plan_response.get("total_plans_generated", 0),
