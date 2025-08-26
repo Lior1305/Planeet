@@ -193,9 +193,24 @@ def get_outing_history():
         future_outings = []
         past_outings = []
         
+        # Check if any outings need status updates
+        outings_to_update = []
+        
         for outing in outing_history:
             try:
                 outing_date = datetime.fromisoformat(outing["outing_date"]).date()
+                outing_time = outing.get("outing_time", "00:00")
+                
+                # Create full datetime for comparison
+                outing_datetime = datetime.combine(outing_date, datetime.strptime(outing_time, "%H:%M").time())
+                current_datetime = datetime.now()
+                
+                if outing_datetime < current_datetime and outing.get("status") == "planned":
+                    # Outing has passed but still marked as planned - mark for update
+                    outings_to_update.append(outing["plan_id"])
+                    # Mark as completed for this response
+                    outing["status"] = "completed"
+                
                 if outing_date >= today:
                     future_outings.append(outing)
                 else:
@@ -203,6 +218,18 @@ def get_outing_history():
             except:
                 # If date parsing fails, treat as past outing
                 past_outings.append(outing)
+        
+        # Update the status of outings that have passed (in background)
+        if outings_to_update:
+            try:
+                for plan_id in outings_to_update:
+                    profiles_collection.update_one(
+                        {"user_id": user_id, "outing_history.plan_id": plan_id},
+                        {"$set": {"outing_history.$.status": "completed"}}
+                    )
+                logger.info(f"Updated {len(outings_to_update)} outings to completed status for user_id: {user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to update outing statuses: {e}")
         
         return jsonify({
             "user_id": user_id,
@@ -248,4 +275,53 @@ def update_outing_status(plan_id):
             
     except Exception as e:
         logger.error(f"Error updating outing status: {e}")
+        return jsonify({"error": str(e)}), 500 
+
+@api.route('/outing-history/update-expired', methods=['POST'])
+def update_expired_outings():
+    """Update all expired outings across all users (admin/maintenance endpoint)"""
+    try:
+        profiles_collection = db.get_profiles_collection()
+        current_datetime = datetime.now()
+        
+        # Find all profiles with outing history
+        profiles = profiles_collection.find({"outing_history": {"$exists": True, "$ne": []}})
+        
+        total_updated = 0
+        
+        for profile in profiles:
+            user_id = profile["user_id"]
+            outing_history = profile.get("outing_history", [])
+            outings_to_update = []
+            
+            for outing in outing_history:
+                try:
+                    if outing.get("status") == "planned":
+                        outing_date = datetime.fromisoformat(outing["outing_date"]).date()
+                        outing_time = outing.get("outing_time", "00:00")
+                        outing_datetime = datetime.combine(outing_date, datetime.strptime(outing_time, "%H:%M").time())
+                        
+                        if outing_datetime < current_datetime:
+                            outings_to_update.append(outing["plan_id"])
+                except:
+                    continue
+            
+            # Update expired outings for this user
+            if outings_to_update:
+                for plan_id in outings_to_update:
+                    result = profiles_collection.update_one(
+                        {"user_id": user_id, "outing_history.plan_id": plan_id},
+                        {"$set": {"outing_history.$.status": "completed"}}
+                    )
+                    if result.modified_count > 0:
+                        total_updated += 1
+        
+        logger.info(f"Updated {total_updated} expired outings across all users")
+        return jsonify({
+            "message": f"Updated {total_updated} expired outings",
+            "total_updated": total_updated
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error updating expired outings: {e}")
         return jsonify({"error": str(e)}), 500 

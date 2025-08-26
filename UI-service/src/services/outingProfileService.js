@@ -93,6 +93,31 @@ class OutingProfileService {
       selected_plan: selectedPlan
     };
   }
+
+  // Admin/maintenance method to update all expired outings
+  async updateExpiredOutings() {
+    try {
+      const response = await fetch(`${this.baseUrl}/outing-history/update-expired`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Outing profile service error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Expired outings updated:', result);
+      return result;
+    } catch (error) {
+      console.error('Error updating expired outings:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export outing profile service instance

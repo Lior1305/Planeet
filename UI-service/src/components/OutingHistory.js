@@ -30,9 +30,9 @@ const OutingHistory = () => {
     }
   };
 
-  const updateOutingStatus = async (planId, newStatus) => {
+  const updateOutingStatus = async (planId, newStatus, userId) => {
     try {
-      await outingProfileService.updateOutingStatus(planId, newStatus);
+      await outingProfileService.updateOutingStatus(planId, newStatus, userId);
       // Reload the history to reflect the change
       await loadOutingHistory();
     } catch (error) {
@@ -160,16 +160,11 @@ const OutingHistory = () => {
 
                   <div className="outing-actions">
                     <button
-                      onClick={() => updateOutingStatus(outing.plan_id, 'completed', currentUser.id)}
-                      className="btn btn-success btn-sm"
-                    >
-                      Mark as Completed
-                    </button>
-                    <button
                       onClick={() => updateOutingStatus(outing.plan_id, 'cancelled', currentUser.id)}
-                      className="btn btn-danger btn-sm"
+                      className={`btn btn-danger btn-sm ${outing.status === 'cancelled' ? 'disabled' : ''}`}
+                      disabled={outing.status === 'cancelled'}
                     >
-                      Cancel
+                      {outing.status === 'cancelled' ? 'Cancelled' : 'Cancel'}
                     </button>
                   </div>
                 </div>

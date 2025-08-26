@@ -1220,6 +1220,21 @@ code {
   background: #dc2626;
 }
 
+.btn.disabled,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+}
+
+.btn.disabled:hover,
+.btn:disabled:hover {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+  transform: none;
+}
+
 .no-user-message,
 .loading-message,
 .error-message {
