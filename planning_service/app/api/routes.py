@@ -24,9 +24,10 @@ async def create_plan(plan_request: PlanRequest):
     """
     Create a new outing plan based on user requirements
     
-    This endpoint receives user input and creates a plan request that will be
-    sent to the Venues Service for venue discovery and planning.
-    The Venues Service already creates multiple plans with different venue types.
+    This endpoint now orchestrates the full planning process:
+    1. Get user preferences from Outing-Profile-Service
+    2. Discover venues from Venues Service (Google Places API)
+    3. Generate 3 different plans with randomization logic
     """
     try:
         # Generate unique plan ID
@@ -36,35 +37,64 @@ async def create_plan(plan_request: PlanRequest):
         # Store the plan request
         plan_requests_store[plan_id] = plan_request.dict()
         
-        # Convert datetime objects to ISO strings for JSON serialization
-        plan_data = plan_request.dict()
-        if plan_data.get('date'):
-            plan_data['date'] = plan_data['date'].isoformat()
+        logger.info(f"Starting plan creation for plan_id: {plan_id}")
         
-        # Send to Venues Service for plan generation (it already creates multiple plans)
-        venues_plan_response = await venues_service_client.generate_venue_plan(plan_data)
+        # Step 1: Get user preferences from Outing-Profile-Service
+        user_preferences = None
+        if plan_request.use_personalization:
+            try:
+                user_preferences = await outing_profile_client.get_user_preferences(plan_request.user_id)
+                logger.info(f"Retrieved user preferences for user {plan_request.user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to get user preferences: {e}. Continuing without personalization.")
         
-        if venues_plan_response:
-            # Store the complete plan response (contains multiple plans from venues service)
-            plan_store[plan_id] = venues_plan_response
-            
-            # Return the complete response from venues service (includes full venue details)
-            return venues_plan_response
-        else:
-            # Plan generation failed
-            plan_store[plan_id] = {
-                "plan_id": plan_id,
-                "status": "failed",
-                "message": "Failed to generate venue plans"
-            }
-            
+        # Step 2: Discover venues from Venues Service
+        venue_request = {
+            "venue_types": [vt.value for vt in plan_request.venue_types],
+            "location": plan_request.location.dict(),
+            "radius_km": plan_request.radius_km,
+            "user_id": plan_request.user_id,
+            "use_personalization": plan_request.use_personalization
+        }
+        
+        logger.info(f"Requesting venue discovery for types: {venue_request['venue_types']}")
+        venues_response = await venues_service_client.discover_venues(venue_request)
+        
+        if not venues_response:
             raise HTTPException(
                 status_code=500, 
-                detail="Failed to generate venue plans"
+                detail="Failed to discover venues from Venues Service"
             )
+        
+        venues_by_type = venues_response.get("venues_by_type", {})
+        if not venues_by_type:
+            raise HTTPException(
+                status_code=404,
+                detail="No venues found for the specified criteria"
+            )
+        
+        logger.info(f"Discovered venues for {len(venues_by_type)} venue types")
+        
+        # Step 3: Generate multiple plans using our plan generator
+        from app.services.plan_generator import plan_generator
+        
+        plan_response = await plan_generator.generate_multiple_plans(venues_by_type, plan_request)
+        
+        # Store the complete plan response
+        plan_store[plan_id] = plan_response
+        
+        logger.info(f"Successfully generated {plan_response.get('total_plans_generated', 0)} plans")
+        
+        return plan_response
             
     except Exception as e:
         logger.error(f"Error creating plan: {e}")
+        # Store failed plan
+        plan_store[plan_id] = {
+            "plan_id": plan_id,
+            "status": "failed",
+            "message": f"Plan creation failed: {str(e)}"
+        }
         raise HTTPException(status_code=500, detail=f"Plan creation failed: {str(e)}")
 
 @router.get("/plans/{plan_id}", response_model=Dict[str, Any])
