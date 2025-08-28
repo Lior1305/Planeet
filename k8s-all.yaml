@@ -320,13 +320,17 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v1.0.0
+          image: liorberlin/booking-service:v1.3
           imagePullPolicy: Always
           ports:
             - containerPort: 8004
           env:
             - name: PORT
               value: "8004"
+            - name: MONGO_URL
+              value: "mongodb://mongo:27017"
+            - name: DATABASE_NAME
+              value: "Planeet"
           resources:
             requests:
               memory: "128Mi"
