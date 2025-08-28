@@ -1,19 +1,22 @@
-# Venues Service
+# Venues and Activities Service
 
-A comprehensive FastAPI service for managing venues with advanced search and filtering capabilities. This service provides a complete API for discovering, creating, and managing places with location-based search, ratings, amenities, link management, and **personalized recommendations** based on user preferences from the Planning Service.
+A focused FastAPI service for venue discovery and management using Google Places API. This service handles venue discovery from external APIs, applies personalization, and provides venue data to the Planning Service for plan creation.
 
 ## 🎯 **Features**
 
-- **Venue Management**: Full CRUD operations for venues
-- **Advanced Search**: Filter by venue type, location, rating, price range, amenities
-- **Location-based Search**: Radius-based venue discovery using coordinates
-- **Link Management**: Add, update, and manage venue links (websites, booking, social media)
-- **Personalized Search**: AI-powered venue recommendations based on user preferences
-- **Planning Service Integration**: Generate comprehensive outing plans with venue suggestions
-- **Real-time Updates**: Status notifications and progress tracking during plan generation
 - **Google Places Integration**: Real-time venue discovery using Google Places API
+- **Venue Discovery**: Discover venues by type, location, and radius
+- **Personalization**: Apply user preferences to venue ranking
+- **Venue Management**: Full CRUD operations for venues  
+- **Advanced Search**: Filter by venue type, location, rating, price range, amenities
+- **Link Management**: Add, update, and manage venue links (websites, booking, social media)
+- **MongoDB Storage**: Persist discovered venues for future use
 
 ## API Endpoints
+
+### Venue Discovery (NEW)
+
+- `POST /api/v1/venues/discover` - **Discover venues from Google Places API**
 
 ### Venues
 

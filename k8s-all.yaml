@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v2.1.1
+          image: dartoledano/planning-service:v3.0.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8001
@@ -268,7 +268,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v2.3.0
+          image: dartoledano/venues-service:v3.0.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8000

@@ -45,6 +45,25 @@ class Venue(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
 # User Preference Models (for integration with Planning Service)
+# Venue Discovery Models (NEW)
+class VenueDiscoveryRequest(BaseModel):
+    """Request model for venue discovery from Google Places API"""
+    venue_types: List[str] = Field(..., description="Types of venues to discover")
+    location: Location = Field(..., description="Location for venue search")
+    radius_km: float = Field(10.0, gt=0, le=100, description="Search radius in kilometers")
+    user_id: Optional[str] = Field(None, description="User identifier for personalization")
+    use_personalization: bool = Field(True, description="Whether to apply personalization")
+
+class VenueDiscoveryResponse(BaseModel):
+    """Response model for venue discovery"""
+    venues_by_type: Dict[str, List[Dict[str, Any]]] = Field(..., description="Venues grouped by type")
+    total_venues_found: int = Field(..., description="Total number of venues found")
+    venue_types_requested: List[str] = Field(..., description="Venue types that were requested")
+    location: Location = Field(..., description="Search location")
+    radius_km: float = Field(..., description="Search radius used")
+    personalization_applied: bool = Field(..., description="Whether personalization was applied")
+    discovered_at: str = Field(..., description="Timestamp when venues were discovered")
+
 class UserPreferences(BaseModel):
     user_id: str = Field(..., description="User identifier")
     preferred_venue_types: Optional[List[VenueType]] = Field(None, description="Preferred venue types")

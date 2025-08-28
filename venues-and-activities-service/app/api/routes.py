@@ -12,7 +12,8 @@ from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
     SearchRequest, SearchResponse, PersonalizedSearchRequest, PersonalizedSearchResponse,
     MessageResponse, PaginatedResponse, UserPreferences,
-    VenueType, TimeSlot, TimeSlotCreate, TimeSlotUpdate, TimeSlotSearchRequest, TimeSlotSearchResponse, TimeSlotStatus
+    VenueType, TimeSlot, TimeSlotCreate, TimeSlotUpdate, TimeSlotSearchRequest, TimeSlotSearchResponse, TimeSlotStatus,
+    VenueDiscoveryRequest, VenueDiscoveryResponse
 )
 
 # Initialize router
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 from app.db import get_venues_collection, get_time_slots_collection
 from app.services.planning_integration import planning_integration
 from app.services.personalization import personalization_service
-from app.services.plan_generator import plan_generator
+from app.services.venue_discovery import venue_discovery
 
 # Helper functions
 def get_venue_by_id(venue_id: str) -> Venue:
@@ -122,14 +123,134 @@ async def save_discovered_venues_to_db(venues: List[dict]):
 
 
 
-# Plan Generation Endpoint (NEW!)
+# Venue Discovery Endpoint (NEW!)
+@router.post("/venues/discover", response_model=VenueDiscoveryResponse)
+async def discover_venues(venue_request: VenueDiscoveryRequest):
+    """
+    Discover venues from Google Places API based on request criteria.
+    
+    This endpoint only handles venue discovery and returns raw venue data
+    for the Planning Service to use in creating plans.
+    """
+    try:
+        # Extract request data
+        venue_types = venue_request.venue_types
+        location = venue_request.location.dict()
+        radius_km = venue_request.radius_km
+        user_id = venue_request.user_id
+        use_personalization = venue_request.use_personalization
+        
+        logger.info(f"Starting venue discovery for types: {venue_types}")
+        
+        # Get user preferences if personalization is enabled
+        user_preferences = None
+        if use_personalization and user_id:
+            user_preferences = await planning_integration.get_user_preferences(user_id)
+        
+        # Discover venues for each requested type
+        venues_by_type = {}
+        total_venues_found = 0
+        
+        for venue_type in venue_types:
+            venues = await venue_discovery.discover_venues_for_type(
+                venue_type, location, radius_km, user_preferences, 20  # Get more venues for planning service to choose from
+            )
+            
+            # Apply personalization and ranking within each venue type
+            if user_preferences and use_personalization:
+                ranked_venues = personalization_service.personalize_venue_list(
+                    venues, user_preferences
+                )
+                # Extract venues and scores, keep top 20 for planning service
+                venues_by_type[venue_type] = [venue for venue, score in ranked_venues[:20]]
+            else:
+                venues_by_type[venue_type] = venues
+                
+            total_venues_found += len(venues_by_type[venue_type])
+            logger.info(f"Discovered {len(venues_by_type[venue_type])} venues for type {venue_type}")
+
+        # Convert venues to dictionaries for JSON serialization
+        serialized_venues_by_type = {}
+        for venue_type, venues in venues_by_type.items():
+            serialized_venues_by_type[venue_type] = [
+                {
+                    "id": venue.id,
+                    "name": venue.name,
+                    "description": venue.description,
+                    "venue_type": venue.venue_type.value,
+                    "location": {
+                        "latitude": venue.location.latitude,
+                        "longitude": venue.location.longitude,
+                        "address": venue.location.address,
+                        "city": venue.location.city,
+                        "country": venue.location.country
+                    },
+                    "rating": venue.rating,
+                    "price_range": venue.price_range,
+                    "amenities": venue.amenities or [],
+                    "links": [
+                        {
+                            "type": link.type,
+                            "url": link.url,
+                            "title": link.title,
+                            "description": link.description
+                        } for link in venue.links
+                    ] if venue.links else [],
+                    "created_at": venue.created_at.isoformat() if venue.created_at else None,
+                    "updated_at": venue.updated_at.isoformat() if venue.updated_at else None
+                }
+                for venue in venues
+            ]
+
+        response = VenueDiscoveryResponse(
+            venues_by_type=serialized_venues_by_type,
+            total_venues_found=total_venues_found,
+            venue_types_requested=venue_types,
+            location=venue_request.location,
+            radius_km=radius_km,
+            personalization_applied=use_personalization and user_preferences is not None,
+            discovered_at=datetime.utcnow().isoformat()
+        )
+
+        # Save discovered venues to MongoDB
+        all_venues_for_saving = []
+        for venues in venues_by_type.values():
+            for venue in venues:
+                venue_dict = {
+                    "name": venue.name,
+                    "venue_type": venue.venue_type.value,
+                    "location": {
+                        "latitude": venue.location.latitude,
+                        "longitude": venue.location.longitude,
+                        "address": venue.location.address,
+                        "city": venue.location.city,
+                        "country": venue.location.country
+                    },
+                    "rating": venue.rating,
+                    "price_range": venue.price_range,
+                    "amenities": venue.amenities,
+                    "links": [link.dict() for link in venue.links] if venue.links else []
+                }
+                all_venues_for_saving.append(venue_dict)
+
+        if all_venues_for_saving:
+            logger.info(f"Saving {len(all_venues_for_saving)} discovered venues to MongoDB...")
+            await save_discovered_venues_to_db(all_venues_for_saving)
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error in venue discovery endpoint: {e}")
+        raise HTTPException(status_code=500, detail=f"Venue discovery failed: {str(e)}")
+
+# Plan Generation Endpoint (DEPRECATED - keeping for backward compatibility)
 @router.post("/plans/generate", response_model=dict)
 async def generate_venue_plan(plan_request: dict):
     """
-    Generate a comprehensive venue plan based on Planning Service request.
+    DEPRECATED: Generate a comprehensive venue plan based on Planning Service request.
     
-    This endpoint receives plan requests from the Planning Service and returns
-    a complete plan with venue suggestions, costs, durations, and travel routes.
+    This endpoint is deprecated. Use /venues/discover for venue discovery and 
+    let the Planning Service handle plan creation.
     """
     try:
         # Validate required fields
