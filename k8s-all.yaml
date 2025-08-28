@@ -302,3 +302,55 @@ spec:
       targetPort: 8000
       nodePort: 30003
   type: NodePort
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-service
+  template:
+    metadata:
+      labels:
+        app: booking-service
+    spec:
+      containers:
+        - name: booking-service
+          image: liorberlin/booking-service:v1.4
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8004
+          env:
+            - name: PORT
+              value: "8004"
+            - name: MONGO_URL
+              value: "mongodb://mongo:27017"
+            - name: DATABASE_NAME
+              value: "planeet"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+spec:
+  selector:
+    app: booking-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8004
+      targetPort: 8004
+      nodePort: 30006
+  type: NodePort

@@ -10,6 +10,7 @@ kubectl wait --for=condition=ready pod -l app=mongo --timeout=120s
 kubectl wait --for=condition=ready pod -l app=ui-service --timeout=120s
 kubectl wait --for=condition=ready pod -l app=planning-service --timeout=120s
 kubectl wait --for=condition=ready pod -l app=venues-service --timeout=120s
+kubectl wait --for=condition=ready pod -l app=booking-service --timeout=120s
 
 Write-Host "All pods are ready!" -ForegroundColor Green
 
@@ -34,6 +35,9 @@ $planningJob = Start-Job -ScriptBlock { kubectl port-forward svc/planning-servic
 Write-Host "Forwarding venues-service (8000:8000)..." -ForegroundColor Blue
 $venuesJob = Start-Job -ScriptBlock { kubectl port-forward svc/venues-service 8000:8000 }
 
+Write-Host "Forwarding booking-service (8004:8004)..." -ForegroundColor Blue
+$bookingJob = Start-Job -ScriptBlock { kubectl port-forward svc/booking-service 8004:8004 }
+
 Write-Host ""
 Write-Host "All services are now accessible:" -ForegroundColor Green
 Write-Host "   UI Service:            http://localhost:3000 (local)" -ForegroundColor White
@@ -43,6 +47,7 @@ Write-Host "   Outing Profile Service: http://localhost:5000" -ForegroundColor W
 Write-Host "   MongoDB:              localhost:27017" -ForegroundColor White
 Write-Host "   Planning Service:     http://localhost:8001" -ForegroundColor White
 Write-Host "   Venues Service:       http://localhost:8000" -ForegroundColor White
+Write-Host "   Booking Service:      http://localhost:8004" -ForegroundColor White
 Write-Host ""
 Write-Host "Press Ctrl+C to stop all port forwarding" -ForegroundColor Yellow
 
@@ -56,7 +61,7 @@ finally {
     Write-Host "Stopping port forwarding..." -ForegroundColor Red
     
     # Immediate aggressive shutdown
-    $jobs = @($userJob, $outingJob, $mongoJob, $uiJob, $planningJob, $venuesJob)
+    $jobs = @($userJob, $outingJob, $mongoJob, $uiJob, $planningJob, $venuesJob, $bookingJob)
     
     # Force kill all kubectl processes immediately
     Write-Host "Force killing kubectl processes..." -ForegroundColor Yellow

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+  namespace: planeet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-service
+  template:
+    metadata:
+      labels:
+        app: booking-service
+    spec:
+      containers:
+      - name: booking-service
+        image: liorberlin/booking-service:v1.0.0
+        ports:
+        - containerPort: 8004
+        env:
+        - name: PORT
+          value: "8004"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+  namespace: planeet
+spec:
+  selector:
+    app: booking-service
+  ports:
+  - name: booking-service
+    port: 8004
+    targetPort: 8004
+  type: ClusterIP
