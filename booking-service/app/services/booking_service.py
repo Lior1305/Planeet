@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 from app.database import get_venues_collection
 from app.models import BookingRequest, BookingResponse, BookingError
 import uuid
+import os
 
 class BookingService:
     

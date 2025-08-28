@@ -320,8 +320,38 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v1.3
-          imagePullPolicy: Always
+          image: liorberlin/booking-service:v1.4
+          imagePullPolicy: Always(.venv) PS C:\final-project-cursor\Planeet\booking-service> kubectl exec -it booking-service-54c4d99d5b-jcjjv -- python -c "
+>> import asyncio
+>> from motor.motor_asyncio import AsyncIOMotorClient
+>>
+>> async def list_venue_ids():
+>>     print('Listing available venue IDs...')
+>>     client = AsyncIOMotorClient('mongodb://mongo:27017')
+>>     db = client['planeet']
+>>     collection = db['venues']
+>>
+>>     # List first 10 venues
+>>     cursor = collection.find({}).limit(10)
+>>     count = 0
+>>     async for doc in cursor:
+>>         count += 1
+>>         print(f'Venue {count}: ID={doc[\"_id\"]}')
+>>         # Show all fields
+>>         for key, value in doc.items():
+>>             if key != '_id':
+>>                 print(f'  {key}: {value}')
+>>         print()
+>>
+>>     client.close()
+>>
+>> asyncio.run(list_venue_ids())
+>> "
+  File "<string>", line 16
+    print(f'Venue {count}: ID={doc[" _id\]}')
+                                            ^
+SyntaxError: f-string expression part cannot include a backslash
+command terminated with exit code 1
           ports:
             - containerPort: 8004
           env:
@@ -330,7 +360,7 @@ spec:
             - name: MONGO_URL
               value: "mongodb://mongo:27017"
             - name: DATABASE_NAME
-              value: "Planeet"
+              value: "planeet"
           resources:
             requests:
               memory: "128Mi"
