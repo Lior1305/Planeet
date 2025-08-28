@@ -785,6 +785,12 @@ code {
   color: var(--text-primary);
 }
 
+.btn-outline {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .container {
@@ -842,5 +848,439 @@ code {
   .modal-body,
   .modal-actions {
     padding: 20px;
+  }
+}
+
+/* Generated Plans Modal specific styles */
+.generated-plans-modal {
+  max-width: 900px;
+  max-height: 90vh;
+}
+
+.plans-summary {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--background-alt);
+  border-radius: var(--radius);
+}
+
+.plans-intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.plans-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.plan-card {
+  background: var(--background);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: var(--transition);
+}
+
+.plan-card:hover {
+  border-color: var(--accent-1);
+  box-shadow: var(--shadow-lg);
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.plan-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.plan-duration,
+.plan-venues {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.venues-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.venue-item {
+  padding: 16px;
+  background: var(--background-alt);
+  border-radius: var(--radius);
+  border-left: 4px solid var(--accent-1);
+}
+
+.venue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.venue-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.venue-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.venue-type-badge {
+  background: var(--primary);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.venue-rating {
+  background: var(--accent-2);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.venue-price {
+  background: var(--accent-1);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.venue-address {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.venue-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.venue-link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+.plan-actions {
+  text-align: center;
+}
+
+/* Responsive adjustments for plans modal */
+@media (max-width: 768px) {
+  .generated-plans-modal {
+    max-width: 95vw;
+    margin: 20px;
+  }
+  
+  .plan-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .venue-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .venue-name {
+    min-width: auto;
+  }
+  
+  .venue-badges {
+    justify-content: flex-start;
+  }
+}
+
+/* Outing History Styles */
+.outing-history-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.outing-history-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.outing-history-header h2 {
+  margin: 0 0 24px 0;
+  font-size: 32px;
+  color: var(--text-primary);
+}
+
+.tab-navigation {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.tab-button {
+  background: var(--background-alt);
+  border: 2px solid var(--border);
+  color: var(--text-secondary);
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.tab-button:hover {
+  border-color: var(--accent-1);
+  color: var(--text-primary);
+}
+
+.tab-button.active {
+  background: var(--accent-1);
+  border-color: var(--accent-1);
+  color: white;
+}
+
+.outings-section {
+  min-height: 400px;
+}
+
+.no-outings-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.no-outings-message p {
+  margin: 8px 0;
+  font-size: 18px;
+}
+
+.outings-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+}
+
+.outing-card {
+  background: var(--background-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  transition: var(--transition);
+}
+
+.outing-card:hover {
+  border-color: var(--accent-1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.outing-card.future {
+  border-left: 4px solid var(--accent-1);
+}
+
+.outing-card.past {
+  border-left: 4px solid var(--accent-3);
+  opacity: 0.8;
+}
+
+.outing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.outing-title {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+.outing-status {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.outing-status.planned {
+  background: var(--accent-1);
+  color: white;
+}
+
+.outing-status.completed {
+  background: var(--accent-2);
+  color: white;
+}
+
+.outing-status.cancelled {
+  background: var(--accent-3);
+  color: white;
+}
+
+.outing-details {
+  margin-bottom: 20px;
+}
+
+.outing-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.outing-info span {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.venue-types {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.venue-type-badge {
+  background: var(--accent-2);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.outing-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.btn-success {
+  background: var(--accent-2);
+  color: white;
+  border: none;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+
+.btn-danger {
+  background: var(--accent-3);
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn.disabled,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+}
+
+.btn.disabled:hover,
+.btn:disabled:hover {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+  transform: none;
+}
+
+.no-user-message,
+.loading-message,
+.error-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.error-message {
+  color: var(--accent-3);
+}
+
+.error-message button {
+  margin-top: 16px;
+}
+
+/* Responsive design for outing history */
+@media (max-width: 768px) {
+  .outing-history-container {
+    padding: 16px;
+  }
+  
+  .outing-history-header h2 {
+    font-size: 24px;
+  }
+  
+  .tab-navigation {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .outings-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .outing-card {
+    padding: 16px;
+  }
+  
+  .outing-actions {
+    flex-direction: column;
   }
 }
