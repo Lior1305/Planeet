@@ -84,12 +84,14 @@ class ConfigService {
         outingProfile: 'http://localhost:30004'
       };
     } else if (this.isKubernetes) {
-      // Production Kubernetes (AKS) - use Ingress paths
+      // Production Kubernetes with LoadBalancer UI - use ingress paths
+      // The UI service has its own LoadBalancer, APIs go through ingress
+      const hostname = window.location.hostname;
       this.services = {
-        planning: '/api/planning',
-        users: '/api/users',
-        venues: '/api/venues',
-        outingProfile: '/api/outing'
+        planning: `http://${hostname}/api/planning`,
+        users: `http://${hostname}/api/users`,
+        venues: `http://${hostname}/api/venues`,
+        outingProfile: `http://${hostname}/api/outing`
       };
     } else {
       // Local development
