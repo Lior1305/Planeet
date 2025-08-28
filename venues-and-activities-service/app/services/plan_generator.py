@@ -6,6 +6,9 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import uuid
 import logging
+import random
+import hashlib
+import time
 
 from app.models.schemas import Venue, UserPreferences, VenueType, Location, VenueLink
 from app.services.personalization import personalization_service
@@ -17,10 +20,68 @@ from app.core.config import VENUES_PER_TYPE
 logger = logging.getLogger(__name__)
 
 class PlanGenerator:
-    """Service for generating comprehensive venue plans"""
+    """Service for generating comprehensive venue plans with randomization"""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+    
+    def _generate_randomness_seed(self, plan_request: Dict[str, Any]) -> int:
+        """
+        Generate a pseudo-random seed based on current time and request hash
+        This ensures different results for identical requests at different times
+        """
+        # Use current timestamp for time-based randomness
+        current_time = int(time.time() * 1000)  # milliseconds for better granularity
+        
+        # Create a hash from request parameters (excluding timestamp-sensitive fields)
+        request_hash_data = {
+            "user_id": plan_request.get("user_id"),
+            "venue_types": sorted(plan_request.get("venue_types", [])),  # sort for consistency
+            "location": plan_request.get("location", {}),
+            "group_size": plan_request.get("group_size"),
+            "budget_range": plan_request.get("budget_range"),
+            "use_personalization": plan_request.get("use_personalization", True)
+        }
+        
+        # Convert to string and hash
+        request_str = str(sorted(request_hash_data.items()))
+        request_hash = hashlib.md5(request_str.encode()).hexdigest()
+        
+        # Combine time and request hash for seed
+        seed = current_time + int(request_hash[:8], 16)
+        return seed
+    
+    def _apply_controlled_randomness(self, venues: List[Venue], seed: int, selection_factor: float = 0.7) -> List[Venue]:
+        """
+        Apply controlled randomness to venue list while maintaining quality
+        
+        Args:
+            venues: List of venues (assumed to be pre-sorted by quality/personalization)
+            seed: Random seed for reproducible randomness within this request
+            selection_factor: Factor determining how much of the top venues to consider (0.7 = top 70%)
+        
+        Returns:
+            Randomly shuffled list with bias toward higher-quality venues
+        """
+        if not venues:
+            return venues
+            
+        # Set random seed for this operation
+        random.seed(seed)
+        
+        # Take top selection_factor of venues for primary selection
+        top_count = max(1, int(len(venues) * selection_factor))
+        top_venues = venues[:top_count]
+        remaining_venues = venues[top_count:]
+        
+        # Shuffle top venues (these are most likely to be selected)
+        random.shuffle(top_venues)
+        
+        # Shuffle remaining venues
+        random.shuffle(remaining_venues)
+        
+        # Combine with bias toward top venues
+        return top_venues + remaining_venues
     
     async def generate_plan(self, plan_request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -51,6 +112,10 @@ class PlanGenerator:
                 plan_id, "processing", "Generating multiple venue plans with different combinations"
             )
             
+            # Generate randomness seed for this request
+            randomness_seed = self._generate_randomness_seed(plan_request)
+            logger.info(f"Generated randomness seed: {randomness_seed}")
+            
             # Get user preferences if personalization is enabled
             user_preferences = None
             if use_personalization:
@@ -76,10 +141,21 @@ class PlanGenerator:
                         venues, user_preferences
                     )
                     # Extract venues and scores, keep top VENUES_PER_TYPE
-                    venues_by_type[venue_type] = [venue for venue, score in ranked_venues[:VENUES_PER_TYPE]]
+                    top_venues = [venue for venue, score in ranked_venues[:VENUES_PER_TYPE]]
+                    
+                    # Apply controlled randomness to the personalized venues
+                    venues_by_type[venue_type] = self._apply_controlled_randomness(
+                        top_venues, randomness_seed + hash(venue_type)
+                    )
+            else:
+                # Apply randomness even without personalization
+                for venue_type in venues_by_type:
+                    venues_by_type[venue_type] = self._apply_controlled_randomness(
+                        venues_by_type[venue_type], randomness_seed + hash(venue_type)
+                    )
             
             # Generate multiple plans with different venue type combinations
-            all_plans = await self._generate_multiple_plans(venues_by_type, max_venues, plan_request)
+            all_plans = await self._generate_multiple_plans(venues_by_type, max_venues, plan_request, randomness_seed)
             
             # Create the final response
             response = {
@@ -247,29 +323,7 @@ class PlanGenerator:
                     description="Official website"
                 ))
             
-            # Add Ontopo reservation link for restaurants and cafes
-            # NOTE: Temporarily disabled due to MongoDB connection issues
-            # TODO: Re-enable once MongoDB connection is fixed
-            if venue_type in ["restaurant", "cafe"]:
-                try:
-                    # Temporarily disabled for testing
-                    # venue_name = place.get("name", "")
-                    # if venue_name:
-                    #     ontopo_link = get_reservation_link(venue_name)
-                    #     if ontopo_link:
-                    #         links.append(VenueLink(
-                    #             type="booking",
-                    #             url=ontopo_link,
-                    #             title="Make Reservation",
-                    #             description="Book your table via Ontopo"
-                    #         ))
-                    #         logger.info(f"Added Ontopo reservation link for {venue_name}")
-                    #     else:
-                    #         logger.info(f"No Ontopo reservation link found for {venue_name}")
-                    logger.info(f"Ontopo integration temporarily disabled for {place.get('name')}")
-                except Exception as e:
-                    logger.warning(f"Failed to get Ontopo link for {place.get('name')}: {e}")
-            
+      
             # Create Venue object
             venue = Venue(
                 id=str(uuid.uuid4()),  # Generate new UUID
@@ -346,7 +400,7 @@ class PlanGenerator:
         
         return amenities
 
-    async def _generate_multiple_plans(self, venues_by_type: Dict[str, List[Venue]], max_venues: int, plan_request: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _generate_multiple_plans(self, venues_by_type: Dict[str, List[Venue]], max_venues: int, plan_request: Dict[str, Any], randomness_seed: int) -> List[Dict[str, Any]]:
         """
         Generate exactly 3 different venue plans with balanced venue types.
         
@@ -367,9 +421,12 @@ class PlanGenerator:
             venues_for_plan = []
             types_used = []
             
-            # Simple approach: use different venue types for each plan
+            # Use randomness to create different venue type selections for each plan
+            random.seed(randomness_seed + plan_index)  # Different seed for each plan
+            
+            # Create different type selection strategies with randomness
             if plan_index == 0:
-                # First plan: use first max_venues types
+                # First plan: use first max_venues types but with some randomness
                 selected_types = venue_types[:max_venues]
             elif plan_index == 1:
                 # Second plan: use middle max_venues types
@@ -379,16 +436,32 @@ class PlanGenerator:
                 # Third plan: use last max_venues types
                 selected_types = venue_types[-max_venues:]
             
+            # Shuffle the selected types for variety
+            selected_types = list(selected_types)
+            random.shuffle(selected_types)
+            
+            # Track venue categories used in this specific plan to prevent duplicates
+            categories_used_in_plan = set()
+            
             # Get venues for each selected venue type
             for venue_type in selected_types:
+                # Skip if we've already used this category in this plan
+                if venue_type in categories_used_in_plan:
+                    continue
+                    
                 # Find unused venues of this type
                 available_venues = [v for v in venues_by_type[venue_type] if v.id not in used_venues]
                 if available_venues:
-                    # Take the first available venue
-                    selected_venue = available_venues[0]
+                    # Instead of always taking the first, select randomly from top venues
+                    # This adds randomness while still favoring quality venues
+                    selection_count = min(3, len(available_venues))  # Consider top 3 available venues
+                    top_available = available_venues[:selection_count]
+                    selected_venue = random.choice(top_available)
+                    
                     venues_for_plan.append(selected_venue)
                     used_venues.add(selected_venue.id)
                     types_used.append(venue_type)
+                    categories_used_in_plan.add(venue_type)  # Track category usage in this plan
                     
                     # If we've reached max_venues, stop adding more
                     if len(venues_for_plan) >= max_venues:
@@ -410,14 +483,26 @@ class PlanGenerator:
             venues_for_plan = []
             types_used = []
             
+            # Set random seed for this fallback plan
+            random.seed(randomness_seed + plan_index + 100)  # +100 to differentiate from main plans
+            
+            # Track venue categories used in this specific fallback plan to prevent duplicates
+            categories_used_in_plan = set()
+            
             # Try to create a plan with remaining unused venues
             for venue_type, venues in venues_by_type.items():
+                # Skip if we've already used this category in this plan
+                if venue_type in categories_used_in_plan:
+                    continue
+                    
                 unused = [v for v in venues if v.id not in used_venues]
                 if unused and len(venues_for_plan) < max_venues:
-                    selected_venue = unused[0]
+                    # Add randomness to fallback selection too
+                    selected_venue = random.choice(unused) if len(unused) > 1 else unused[0]
                     venues_for_plan.append(selected_venue)
                     used_venues.add(selected_venue.id)
                     types_used.append(venue_type)
+                    categories_used_in_plan.add(venue_type)  # Track category usage in this plan
             
             if venues_for_plan:
                 plan = await self._create_single_plan(
@@ -435,6 +520,14 @@ class PlanGenerator:
 
     async def _create_single_plan(self, venues: List[Venue], venue_types: List[str], plan_id: str, plan_request: Dict[str, Any]) -> Dict[str, Any]:
         """Helper method to create a single plan with the given venues"""
+        
+        # Validate that all venue categories are unique within this plan
+        venue_categories = [venue.venue_type.value for venue in venues]
+        unique_categories = set(venue_categories)
+        if len(venue_categories) != len(unique_categories):
+            logger.warning(f"Plan {plan_id} contains duplicate venue categories: {venue_categories}")
+            # Log but don't fail - this shouldn't happen with our new logic but good to catch
+        
         # Calculate total duration (assuming 1 hour per venue + travel time)
         total_duration = len(venues) * 1.0  # Base duration per venue
         

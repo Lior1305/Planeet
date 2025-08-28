@@ -20,6 +20,9 @@ app.add_middleware(
 # Include the API router
 app.include_router(router)
 
+# Also include the same router with /api/v1 prefix for compatibility with planning service
+app.include_router(router, prefix="/api/v1")
+
 @app.get("/")
 async def root():
     """Root endpoint"""
