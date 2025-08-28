@@ -5,12 +5,21 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: planeet
-  labels:
-    name: planeet
-    app: planeet
 
 ---
-
+# ===============================
+# Planeet Secrets
+# ===============================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: planeet-secrets
+  namespace: planeet
+type: Opaque
+stringData:
+  MONGO_URI: "mongodb://mongo:27017/planeet"
+  GOOGLE_PLACES_API_KEY: "AIzaSyCPVz2SxWPbfrilbZ2wo8KcSlBNa8uPYPM"
+---
 # ===============================
 # MongoDB PVC
 # ===============================
@@ -25,7 +34,7 @@ spec:
   resources:
     requests:
       storage: 5Gi
-  storageClassName: default
+  storageClassName: standard   # GKE default
 
 ---
 
@@ -61,9 +70,7 @@ spec:
             - name: MONGO_INITDB_DATABASE
               value: "planeet"
           resources:
-            requests:
-              memory: "64Mi"
-              cpu: "50m"
+            requests: {}
             limits:
               memory: "128Mi"
               cpu: "100m"
@@ -86,8 +93,7 @@ spec:
   selector:
     app: mongo
   ports:
-    - name: mongo
-      protocol: TCP
+    - protocol: TCP
       port: 27017
       targetPort: 27017
   type: ClusterIP
@@ -102,8 +108,6 @@ kind: Deployment
 metadata:
   name: outing-profile-service
   namespace: planeet
-  labels:
-    app: outing-profile-service
 spec:
   replicas: 1
   selector:
@@ -126,9 +130,7 @@ spec:
                   name: planeet-secrets
                   key: MONGO_URI
           resources:
-            requests:
-              memory: "64Mi"
-              cpu: "50m"
+            requests: {}
             limits:
               memory: "128Mi"
               cpu: "100m"
@@ -159,8 +161,6 @@ kind: Deployment
 metadata:
   name: users-service
   namespace: planeet
-  labels:
-    app: users-service
 spec:
   replicas: 1
   selector:
@@ -173,7 +173,7 @@ spec:
     spec:
       containers:
         - name: users-service
-          image: liorberlin/users-service:v3.1
+          image: liorberlin/users-service:v3.0
           ports:
             - containerPort: 8080
           env:
@@ -185,12 +185,10 @@ spec:
             - name: OUTING_PROFILE_SERVICE_BASE_URL
               value: "http://outing-profile-service.planeet.svc.cluster.local"
           resources:
-            requests:
-              memory: "64Mi"
-              cpu: "50m"
+            requests: {}
             limits:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "512Mi"
+              cpu: "200m"
 
 ---
 
@@ -218,8 +216,6 @@ kind: Deployment
 metadata:
   name: planning-service
   namespace: planeet
-  labels:
-    app: planning-service
 spec:
   replicas: 1
   selector:
@@ -241,9 +237,7 @@ spec:
             - name: OUTING_PROFILE_SERVICE_URL
               value: "http://outing-profile-service.planeet.svc.cluster.local:80"
           resources:
-            requests:
-              memory: "64Mi"
-              cpu: "50m"
+            requests: {}
             limits:
               memory: "128Mi"
               cpu: "100m"
@@ -274,8 +268,6 @@ kind: Deployment
 metadata:
   name: venues-service
   namespace: planeet
-  labels:
-    app: venues-service
 spec:
   replicas: 1
   selector:
@@ -305,9 +297,7 @@ spec:
                   name: planeet-secrets
                   key: MONGO_URI
           resources:
-            requests:
-              memory: "64Mi"
-              cpu: "50m"
+            requests: {}
             limits:
               memory: "128Mi"
               cpu: "100m"
@@ -338,8 +328,6 @@ kind: Deployment
 metadata:
   name: ui-service
   namespace: planeet
-  labels:
-    app: ui-service
 spec:
   replicas: 1
   selector:
@@ -352,7 +340,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.4
+          image: nikaklimenchuk/planeet-ui:react-v1.9.11
           ports:
             - containerPort: 80
           env:
@@ -361,9 +349,7 @@ spec:
             - name: REACT_APP_ENVIRONMENT
               value: "production"
           resources:
-            requests:
-              memory: "32Mi"
-              cpu: "25m"
+            requests: {}
             limits:
               memory: "64Mi"
               cpu: "50m"
@@ -382,7 +368,7 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
-  type: ClusterIP
+  type: LoadBalancer
 
 ---
 
@@ -395,45 +381,44 @@ metadata:
   name: planeet-ingress
   namespace: planeet
   annotations:
-    kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/enable-cors: "true"
 spec:
+  ingressClassName: nginx
   rules:
-    - host: planeet.israelcentral.cloudapp.azure.com   # 👈 replace with your AKS DNS or use the EXTERNAL-IP
-      http:
+    - http:
         paths:
-          - path: /
-            pathType: Prefix
+          - path: /()?(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: ui-service
                 port:
                   number: 80
-          - path: /api/planning
-            pathType: Prefix
-            backend:
-              service:
-                name: planning-service
-                port:
-                  number: 8001
-          - path: /api/users
-            pathType: Prefix
+          - path: /api/users/?(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: users-service
                 port:
                   number: 80
-          - path: /api/venues
-            pathType: Prefix
+          - path: /api/planning/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: planning-service
+                port:
+                  number: 8001
+          - path: /api/venues/?(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: venues-service
                 port:
                   number: 8000
-          - path: /api/outing
-            pathType: Prefix
+          - path: /api/outing/?(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: outing-profile-service
