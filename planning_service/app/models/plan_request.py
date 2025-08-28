@@ -29,7 +29,7 @@ class Location(BaseModel):
 class PlanRequest(BaseModel):
     """Request from Planning Service to Venues Service for venue discovery"""
     user_id: str = Field(..., description="User identifier")
-    plan_id: str = Field(..., description="Unique plan identifier")
+    plan_id: Optional[str] = Field(None, description="Unique plan identifier")
     
     # Venue requirements
     venue_types: List[VenueType] = Field(..., description="Types of venues needed")
