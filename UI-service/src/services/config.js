@@ -89,7 +89,7 @@ class ConfigService {
       const hostname = window.location.hostname;
       this.services = {
         planning: `http://${hostname}/api/planning`,
-        users: `http://${hostname}/api/users`,
+        users: `http://${hostname}/api`,
         venues: `http://${hostname}/api/venues`,
         outingProfile: `http://${hostname}/api/outing`
       };

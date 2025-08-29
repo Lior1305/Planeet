@@ -13,8 +13,8 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/users")
-@CrossOrigin(origins = "http://localhost:3000")
+@RequestMapping("/users")   // <--- change this
+@CrossOrigin(origins = "*")     // also loosen CORS for testing
 public class UserController {
 
     private final Logger log = LoggerFactory.getLogger(UserController.class);  // Removed 'static'
