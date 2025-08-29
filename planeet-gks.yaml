@@ -173,7 +173,7 @@ spec:
     spec:
       containers:
         - name: users-service
-          image: liorberlin/users-service:v3.0
+          image: liorberlin/users-service:v3.2
           ports:
             - containerPort: 8080
           env:
@@ -340,7 +340,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.11
+          image: nikaklimenchuk/planeet-ui:react-v1.9.15
           ports:
             - containerPort: 80
           env:
@@ -380,47 +380,48 @@ kind: Ingress
 metadata:
   name: planeet-ingress
   namespace: planeet
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/enable-cors: "true"
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
-          - path: /()?(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: ui-service
-                port:
-                  number: 80
-          - path: /api/users/?(.*)
-            pathType: ImplementationSpecific
+          - path: /api/users
+            pathType: Prefix
             backend:
               service:
                 name: users-service
                 port:
                   number: 80
-          - path: /api/planning/?(.*)
-            pathType: ImplementationSpecific
+
+          - path: /api/planning
+            pathType: Prefix
             backend:
               service:
                 name: planning-service
                 port:
                   number: 8001
-          - path: /api/venues/?(.*)
-            pathType: ImplementationSpecific
+
+          - path: /api/venues
+            pathType: Prefix
             backend:
               service:
                 name: venues-service
                 port:
                   number: 8000
-          - path: /api/outing/?(.*)
-            pathType: ImplementationSpecific
+
+          - path: /api/outing
+            pathType: Prefix
             backend:
               service:
                 name: outing-profile-service
+                port:
+                  number: 80
+
+          # UI frontend catch-all
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ui-service
                 port:
                   number: 80
