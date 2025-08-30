@@ -46,7 +46,7 @@ class UserService {
   async register(userData) {
     try {
       console.log('Attempting to register user:', userData.username);
-      
+      console.log('via url:', `${configService.getUsersServiceUrl()}/users`);
       const response = await fetch(`${configService.getUsersServiceUrl()}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
