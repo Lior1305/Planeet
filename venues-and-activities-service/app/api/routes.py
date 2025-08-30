@@ -543,3 +543,11 @@ async def get_service_stats():
         "venue_types": venue_types
     }
 
+def get_venue_by_google_place_id(google_place_id: str) -> Venue:
+    """Get a venue by Google place_id"""
+    venues_collection = get_venues_collection()
+    venue_doc = venues_collection.find_one({"google_place_id": google_place_id})
+    if not venue_doc:
+        raise HTTPException(status_code=404, detail="Venue not found")
+    return Venue(**venue_doc)
+
