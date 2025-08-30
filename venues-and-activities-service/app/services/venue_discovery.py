@@ -166,7 +166,7 @@ class VenueDiscovery:
             
             # Create Venue object
             venue = Venue(
-                id=str(uuid.uuid4()),  # Generate new UUID
+                id=place_id,  # Use Google's place_id for deterministic venue ID
                 name=place.get("name", "Unknown Venue"),
                 description=f"Discovered via Google Places API",
                 venue_type=VenueType(venue_type),
