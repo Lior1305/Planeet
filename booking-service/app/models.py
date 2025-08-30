@@ -33,3 +33,14 @@ class BookingResponse(BaseModel):
 class BookingError(BaseModel):
     error: str
     message: str
+
+class TimeSlotGenerationRequest(BaseModel):
+    venue_id: str = Field(..., description="ID of the venue to generate time slots for")
+    default_counter: int = Field(default=100, description="Default number of available slots per time slot")
+
+class TimeSlotGenerationResponse(BaseModel):
+    venue_id: str
+    venue_name: str
+    open_hours: OpenHours
+    time_slots: List[TimeSlot]
+    message: str

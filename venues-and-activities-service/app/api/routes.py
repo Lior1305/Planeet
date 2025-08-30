@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import datetime
 import uuid
 import logging
+import httpx  # Add this import
 from bson import ObjectId
 from datetime import datetime
 from typing import List, Dict
@@ -83,7 +84,8 @@ def normalize_venue(venue: Dict) -> Dict:
 async def save_discovered_venues_to_db(venues: List[dict]):
     logger.info(f"Starting to save {len(venues)} venues to MongoDB")
     venues_collection = get_venues_collection()
-    saved_count = 0
+    saved_venues = []
+    time_slots_generated = 0
 
     for venue in venues:
         try:
@@ -103,15 +105,31 @@ async def save_discovered_venues_to_db(venues: List[dict]):
 
             # Insert into MongoDB (venues)
             result = venues_collection.insert_one(venue_data)
-            saved_count += 1
+            
+            # Add the saved venue to our list with the MongoDB _id
+            saved_venue = venue_data.copy()
+            saved_venue["_id"] = result.inserted_id
+            saved_venues.append(saved_venue)
+            
             logger.info(f"Saved venue: {venue_data['venue_name']} (ID: {result.inserted_id})")
+            
+            # Generate time slots immediately after saving
+            venue_name = venue_data.get('venue_name', 'Unknown')
+            time_slots_result = await generate_time_slots_for_venue(str(result.inserted_id), venue_name)
+            
+            if time_slots_result:
+                time_slots_generated += 1
+                logger.info(f"✅ Time slots generated for: {venue_name}")
+            else:
+                logger.warning(f"⚠️ Failed to generate time slots for: {venue_name}")
 
         except Exception as e:
             logger.error(f"❌ Failed to save venue {venue.get('venue_name', venue.get('name'))}: {e}")
             continue
 
-    logger.info(f"Successfully saved {saved_count} new venues")
-    return saved_count
+    logger.info(f"Successfully saved {len(saved_venues)} new venues")
+    logger.info(f"✅ Generated time slots for {time_slots_generated} venues")
+    return saved_venues
 
 
 
@@ -121,8 +139,8 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
     """
     Discover venues from Google Places API based on request criteria.
     
-    This endpoint only handles venue discovery and returns raw venue data
-    for the Planning Service to use in creating plans.
+    This endpoint handles venue discovery, saves venues to MongoDB,
+    and automatically generates time slots via the booking service.
     """
     try:
         # Extract request data
@@ -145,7 +163,7 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
         
         for venue_type in venue_types:
             venues = await venue_discovery.discover_venues_for_type(
-                venue_type, location, radius_km, user_preferences, 20  # Get more venues for planning service to choose from
+                venue_type, location, radius_km, user_preferences, 20
             )
             
             # Apply personalization and ranking within each venue type
@@ -153,7 +171,6 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
                 ranked_venues = personalization_service.personalize_venue_list(
                     venues, user_preferences
                 )
-                # Extract venues and scores, keep top 20 for planning service
                 venues_by_type[venue_type] = [venue for venue, score in ranked_venues[:20]]
             else:
                 venues_by_type[venue_type] = venues
@@ -204,25 +221,26 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
             discovered_at=datetime.utcnow().isoformat()
         )
 
-        # Save discovered venues to MongoDB
+        # Save discovered venues to MongoDB (time slots will be generated automatically)
         all_venues_for_saving = []
         for venues in venues_by_type.values():
             for venue in venues:
                 venue_dict = {
-                    "id": venue.id,  # Google place_id (for compatibility with save function)
+                    "id": venue.id,  # Google place_id
                     "venue_name": venue.name,
                     "venue_type": venue.venue_type.value,
-                    "opening_hours": {  # Dictionary format
+                    "opening_hours": {
                         "open_at": "",
                         "close_at": ""
                     },
-                    "time_slots": []  # Empty for now
+                    "time_slots": []
                 }
                 all_venues_for_saving.append(venue_dict)
 
         if all_venues_for_saving:
             logger.info(f"Saving {len(all_venues_for_saving)} discovered venues to MongoDB...")
-            await save_discovered_venues_to_db(all_venues_for_saving)
+            saved_venues = await save_discovered_venues_to_db(all_venues_for_saving)
+            logger.info(f"✅ Venue discovery and time slot generation completed for {len(saved_venues)} venues")
 
         return response
 
@@ -550,4 +568,126 @@ def get_venue_by_google_place_id(google_place_id: str) -> Venue:
     if not venue_doc:
         raise HTTPException(status_code=404, detail="Venue not found")
     return Venue(**venue_doc)
+
+
+async def generate_time_slots_for_venue(venue_id: str, venue_name: str):
+    """
+    Call booking service to generate time slots for a venue
+    """
+    try:
+        # Booking service URL - adjust port as needed
+        booking_service_url = "http://localhost:8001/v1/generate-time-slots"
+        
+        logger.info(f"Calling booking service to generate time slots for venue: {venue_name} (ID: {venue_id})")
+        logger.info(f"Booking service URL: {booking_service_url}")
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                booking_service_url,
+                json={
+                    "venue_id": venue_id,
+                    "default_counter": 100
+                },
+                timeout=30.0
+            )
+            
+            logger.info(f"Booking service response status: {response.status_code}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Successfully generated time slots for venue: {venue_name}")
+                logger.info(f"Generated {len(result.get('time_slots', []))} time slots")
+                return result
+            else:
+                logger.warning(f"❌ Failed to generate time slots for venue {venue_name}: {response.status_code} - {response.text}")
+                return None
+                
+    except httpx.ConnectError as e:
+        logger.error(f"❌ Connection error to booking service: {str(e)}")
+        return None
+    except httpx.TimeoutException as e:
+        logger.error(f"❌ Timeout error to booking service: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error generating time slots for venue {venue_name}: {str(e)}")
+        return None
+
+@router.post("/venues/{venue_id}/generate-time-slots")
+async def generate_time_slots_for_venue_endpoint(venue_id: str):
+    """
+    Manually generate time slots for a specific venue
+    """
+    try:
+        # First verify the venue exists
+        venue = get_venue_by_id(venue_id)
+        if not venue:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        
+        # Call booking service to generate time slots
+        result = await generate_time_slots_for_venue(venue_id, venue.name)
+        
+        if result:
+            return {
+                "success": True,
+                "venue_id": venue_id,
+                "venue_name": venue.name,
+                "time_slots_generated": True,
+                "message": f"Successfully generated time slots for {venue.name}",
+                "time_slots_count": len(result.get("time_slots", []))
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to generate time slots")
+            
+    except Exception as e:
+        logger.error(f"Error generating time slots: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/venues/generate-time-slots/batch")
+async def generate_time_slots_batch(venue_ids: List[str]):
+    """
+    Generate time slots for multiple venues at once
+    """
+    try:
+        results = []
+        
+        for venue_id in venue_ids:
+            try:
+                venue = get_venue_by_id(venue_id)
+                if venue:
+                    result = await generate_time_slots_for_venue(venue_id, venue.name)
+                    results.append({
+                        "venue_id": venue_id,
+                        "venue_name": venue.name,
+                        "success": result is not None,
+                        "message": "Time slots generated" if result else "Failed to generate",
+                        "time_slots_count": len(result.get("time_slots", [])) if result else 0
+                    })
+                else:
+                    results.append({
+                        "venue_id": venue_id,
+                        "success": False,
+                        "message": "Venue not found",
+                        "time_slots_count": 0
+                    })
+            except Exception as e:
+                results.append({
+                    "venue_id": venue_id,
+                    "success": False,
+                    "message": str(e),
+                    "time_slots_count": 0
+                })
+        
+        successful = len([r for r in results if r["success"]])
+        failed = len([r for r in results if not r["success"]])
+        
+        return {
+            "total_venues": len(venue_ids),
+            "successful": successful,
+            "failed": failed,
+            "results": results,
+            "summary": f"Generated time slots for {successful} venues, failed for {failed} venues"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

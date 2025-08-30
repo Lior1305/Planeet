@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from typing import Dict, Any
-from app.models import BookingRequest, BookingResponse, BookingError
+from app.models import BookingRequest, BookingResponse, BookingError, TimeSlotGenerationRequest, TimeSlotGenerationResponse
 from app.services.booking_service import BookingService
 from app.database import connect_to_mongo
 
@@ -88,3 +88,33 @@ async def validate_booking(booking_request: BookingRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate-time-slots", response_model=TimeSlotGenerationResponse)
+async def generate_venue_time_slots(request: TimeSlotGenerationRequest):
+    """
+    Generate time slots for a venue based on its opening hours
+    This endpoint is called by the venues and activities service
+    """
+    try:
+        response = await BookingService.generate_venue_time_slots(request)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/generate-time-slots/{venue_id}")
+async def generate_time_slots_for_venue(
+    venue_id: str, 
+    default_counter: int = 100
+):
+    """
+    Generate time slots for a specific venue by ID
+    """
+    try:
+        request = TimeSlotGenerationRequest(
+            venue_id=venue_id,
+            default_counter=default_counter
+        )
+        response = await BookingService.generate_venue_time_slots(request)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
