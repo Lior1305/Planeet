@@ -340,7 +340,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.24
+          image: nikaklimenchuk/planeet-ui:react-v1.9.27
           ports:
             - containerPort: 80
           env:
@@ -368,8 +368,7 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
-  type: LoadBalancer
-
+  type: ClusterIP
 ---
 # =============================== 
 # Ingress Resource - working with ingress not getting to the users tho
@@ -423,3 +422,4 @@ spec:
                 name: ui-service
                 port:
                   number: 80
+
