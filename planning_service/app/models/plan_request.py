@@ -2,7 +2,7 @@
 Models for plan requests and responses between Planning Service and Venues Service
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -54,6 +54,29 @@ class PlanRequest(BaseModel):
     use_personalization: bool = Field(True, description="Whether to use user preferences")
     max_venues: int = Field(5, ge=1, le=20, description="Maximum number of venues to suggest")
     include_links: bool = Field(True, description="Whether to include venue links")
+    
+    @field_validator('date')
+    @classmethod
+    def validate_start_time_15_minute_intervals(cls, v: datetime) -> datetime:
+        """
+        Validate that the start time is in 15-minute intervals
+        Valid times: XX:00, XX:15, XX:30, XX:45
+        """
+        if v.minute not in [0, 15, 30, 45]:
+            valid_times = ["XX:00", "XX:15", "XX:30", "XX:45"]
+            raise ValueError(
+                f"Start time must be in 15-minute intervals. "
+                f"Valid minutes are: {', '.join(valid_times)}. "
+                f"Received: {v.strftime('%H:%M')}"
+            )
+        
+        if v.second != 0 or v.microsecond != 0:
+            raise ValueError(
+                f"Start time must not include seconds or microseconds. "
+                f"Received: {v.strftime('%H:%M:%S.%f')}"
+            )
+        
+        return v
 
 class VenueSuggestion(BaseModel):
     """Individual venue suggestion for the plan"""
@@ -66,7 +89,13 @@ class VenueSuggestion(BaseModel):
     amenities: Optional[List[str]] = Field(None, description="Available amenities")
     links: Optional[List[Dict[str, str]]] = Field(None, description="Venue links")
     personalization_score: Optional[float] = Field(None, description="How well it matches user preferences")
-    travel_time_from_previous: Optional[float] = Field(None, description="Travel time from previous venue in minutes")
+    
+    # Enhanced timing information
+    start_time: Optional[str] = Field(None, description="Calculated start time for this venue (HH:MM)")
+    end_time: Optional[str] = Field(None, description="Calculated end time for this venue (HH:MM)")
+    duration_minutes: Optional[int] = Field(None, description="Estimated duration at this venue in minutes")
+    travel_time_from_previous: Optional[int] = Field(None, description="Travel time from previous venue in minutes")
+    travel_distance_km: Optional[float] = Field(None, description="Distance from previous venue in kilometers")
 
 class PlanResponse(BaseModel):
     """Response from Venues Service to Planning Service with venue suggestions"""

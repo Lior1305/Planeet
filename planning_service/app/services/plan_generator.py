@@ -11,6 +11,7 @@ import hashlib
 import time
 
 from app.models.plan_request import PlanRequest
+from app.services.time_calculator import time_calculator
 
 logger = logging.getLogger(__name__)
 
@@ -272,12 +273,22 @@ class PlanGenerator:
             logger.warning(f"Plan {plan_id} contains duplicate venue categories: {venue_categories}")
             # Log but don't fail - this shouldn't happen with our new logic but good to catch
         
-        # Calculate total duration (assuming 1 hour per venue + travel time)
-        total_duration = len(venues) * 1.0  # Base duration per venue
+        # Optimize venue order to minimize travel time
+        optimized_venues = time_calculator.optimize_venue_order(venues)
         
-        # Create simplified venue structure with only essential fields
+        # Calculate timing for all venues
+        timed_venues = time_calculator.calculate_plan_timing(
+            optimized_venues, 
+            plan_request.date,  # Start time from user request
+            plan_request.group_size
+        )
+        
+        # Get plan timing summary
+        timing_summary = time_calculator.get_plan_summary(timed_venues)
+        
+        # Create simplified venue structure with timing information
         simplified_venues = []
-        for i, venue in enumerate(venues):
+        for i, venue in enumerate(timed_venues):
             # Get the first website link if available, otherwise null
             url_link = None
             if venue.get("links") and len(venue["links"]) > 0:
@@ -295,21 +306,34 @@ class PlanGenerator:
                 "price_range": venue.get("price_range"),
                 "amenities": venue.get("amenities", []),
                 "address": venue["location"].get("address", ""),
-                "url_link": url_link
+                "url_link": url_link,
+                
+                # Enhanced timing information
+                "start_time": venue.get("start_time"),
+                "end_time": venue.get("end_time"),
+                "duration_minutes": venue.get("duration_minutes"),
+                "travel_time_from_previous": venue.get("travel_time_from_previous"),
+                "travel_distance_km": venue.get("travel_distance_km")
             }
             simplified_venues.append(simplified_venue)
         
-        # Create simplified plan structure
+        # Calculate total duration in hours for backward compatibility
+        total_duration_hours = timing_summary.get("total_duration_minutes", 0) / 60.0
+        
+        # Create enhanced plan structure with timing information
         plan = {
             "plan_id": plan_id,
             "user_id": plan_request.user_id,
             "suggested_venues": simplified_venues,
             "venue_types_included": venue_types,
-            "estimated_total_duration": total_duration,
+            "estimated_total_duration": round(total_duration_hours, 2),
             "personalization_applied": plan_request.use_personalization,
             "generated_at": datetime.utcnow().isoformat(),
             "status": "completed",
-            "message": f"Plan with {len(venues)} venues from {len(venue_types)} venue types"
+            "message": f"Plan with {len(venues)} venues from {len(venue_types)} venue types",
+            
+            # Enhanced timing summary
+            "timing_summary": timing_summary
         }
         
         return plan
