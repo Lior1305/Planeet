@@ -84,10 +84,9 @@ class ConfigService {
         outingProfile: 'http://localhost:30004'
       };
     } else if (this.isKubernetes) {
-      // Production Kubernetes with LoadBalancer UI - use ingress paths
-      // The UI service has its own LoadBalancer, APIs go through ingress
+      // Production Kubernetes with NodePort services - use UI service IP + NodePorts
+      // Each service is exposed on a specific NodePort
       const hostname = window.location.hostname;
-      console.log('hostname', hostname);
       this.services = {
         planning: `http://${hostname}/api/planning`,
         users: `http://${hostname}/api`,
