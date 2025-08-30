@@ -173,7 +173,7 @@ spec:
     spec:
       containers:
         - name: users-service
-          image: liorberlin/users-service:v3.2
+          image: liorberlin/users-service:v3.4.5
           ports:
             - containerPort: 8080
           env:
@@ -340,7 +340,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.15
+          image: nikaklimenchuk/planeet-ui:react-v1.9.24
           ports:
             - containerPort: 80
           env:
@@ -371,28 +371,29 @@ spec:
   type: LoadBalancer
 
 ---
-
-# ===============================
-# Ingress Resource
+# =============================== 
+# Ingress Resource - working with ingress not getting to the users tho
 # ===============================
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: planeet-ingress
   namespace: planeet
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /users$1
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
-          - path: /api/users
-            pathType: Prefix
+          # This rule will handle all requests for the users-service
+          - path: /api/users/?(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: users-service
                 port:
                   number: 80
-
           - path: /api/planning
             pathType: Prefix
             backend:
@@ -400,7 +401,6 @@ spec:
                 name: planning-service
                 port:
                   number: 8001
-
           - path: /api/venues
             pathType: Prefix
             backend:
@@ -408,7 +408,6 @@ spec:
                 name: venues-service
                 port:
                   number: 8000
-
           - path: /api/outing
             pathType: Prefix
             backend:
@@ -416,7 +415,6 @@ spec:
                 name: outing-profile-service
                 port:
                   number: 80
-
           # UI frontend catch-all
           - path: /
             pathType: Prefix

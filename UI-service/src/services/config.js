@@ -87,6 +87,7 @@ class ConfigService {
       // Production Kubernetes with LoadBalancer UI - use ingress paths
       // The UI service has its own LoadBalancer, APIs go through ingress
       const hostname = window.location.hostname;
+      console.log('hostname', hostname);
       this.services = {
         planning: `http://${hostname}/api/planning`,
         users: `http://${hostname}/api`,

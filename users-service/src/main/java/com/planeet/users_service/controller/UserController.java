@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/users")   // <--- change this
+@RequestMapping("/users")   
 @CrossOrigin(origins = "*")     // also loosen CORS for testing
 public class UserController {
 
