@@ -12,7 +12,7 @@ from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
     SearchRequest, SearchResponse, PersonalizedSearchRequest, PersonalizedSearchResponse,
     MessageResponse, PaginatedResponse, UserPreferences,
-    VenueType, TimeSlot, TimeSlotCreate, TimeSlotUpdate, TimeSlotSearchRequest, TimeSlotSearchResponse, TimeSlotStatus,
+    VenueType,
     VenueDiscoveryRequest, VenueDiscoveryResponse
 )
 
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/v1", tags=["venues"])
 logger = logging.getLogger(__name__)
 
 # Import database storage and services
-from app.db import get_venues_collection, get_time_slots_collection
+from app.db import get_venues_collection
 from app.services.planning_integration import planning_integration
 from app.services.personalization import personalization_service
 from app.services.venue_discovery import venue_discovery
@@ -75,7 +75,6 @@ def normalize_venue(venue: Dict) -> Dict:
         "venue_name": venue.get("venue_name", venue.get("name", "Unknown Venue")),
         "venue_type": venue.get("venue_type", "other"),
         "opening_hours": venue.get("opening_hours", {"open_at": "", "close_at": ""}),  # Dictionary format
-        "time_slots": venue.get("time_slots", []),  # Empty for now
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
@@ -84,7 +83,6 @@ def normalize_venue(venue: Dict) -> Dict:
 async def save_discovered_venues_to_db(venues: List[dict]):
     logger.info(f"Starting to save {len(venues)} venues to MongoDB")
     venues_collection = get_venues_collection()
-    time_slots_collection = get_time_slots_collection()
     saved_count = 0
 
     for venue in venues:
@@ -107,21 +105,6 @@ async def save_discovered_venues_to_db(venues: List[dict]):
             result = venues_collection.insert_one(venue_data)
             saved_count += 1
             logger.info(f"Saved venue: {venue_data['venue_name']} (ID: {result.inserted_id})")
-
-            # --- Also insert into time_slots ---
-            time_slot_doc = {
-                "venue_id": venue_id,  # Use Google place_id
-                "venue_name": venue_data["venue_name"],
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow(),
-                "date": None,
-                "start_time": None,
-                "end_time": None,
-                "capacity": None,
-                "status": "available"
-            }
-            time_slots_collection.insert_one(time_slot_doc)
-            logger.info(f"Created initial time_slot for venue: {venue_data['venue_name']}")
 
         except Exception as e:
             logger.error(f"❌ Failed to save venue {venue.get('venue_name', venue.get('name'))}: {e}")
@@ -559,4 +542,12 @@ async def get_service_stats():
         "total_venues": total_venues,
         "venue_types": venue_types
     }
+
+def get_venue_by_google_place_id(google_place_id: str) -> Venue:
+    """Get a venue by Google place_id"""
+    venues_collection = get_venues_collection()
+    venue_doc = venues_collection.find_one({"google_place_id": google_place_id})
+    if not venue_doc:
+        raise HTTPException(status_code=404, detail="Venue not found")
+    return Venue(**venue_doc)
 
