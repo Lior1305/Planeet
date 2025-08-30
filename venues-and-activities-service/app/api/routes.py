@@ -30,15 +30,25 @@ from app.services.venue_discovery import venue_discovery
 
 # Helper functions
 def get_venue_by_id(venue_id: str) -> Venue:
-    """Get venue by ID from MongoDB"""
+    """Get venue by ID from MongoDB - supports both MongoDB ObjectId and Google place_id"""
     venues_collection = get_venues_collection()
     
     try:
-        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+        # First try to find by Google place_id
+        venue_doc = venues_collection.find_one({"google_place_id": venue_id})
+        
+        # If not found, try MongoDB ObjectId (for backward compatibility)
+        if not venue_doc:
+            try:
+                venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+            except:
+                pass  # Invalid ObjectId format
+        
         if not venue_doc:
             raise HTTPException(status_code=404, detail="Venue not found")
         
-        venue_doc["id"] = str(venue_doc["_id"])
+        # Set the id field to Google place_id if available, otherwise MongoDB ObjectId
+        venue_doc["id"] = venue_doc.get("google_place_id", str(venue_doc["_id"]))
         return Venue(**venue_doc)
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -62,16 +72,12 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 def normalize_venue(venue: Dict) -> Dict:
     """Extract and normalize fields from Google Places venue data."""
     return {
-        "name": venue.get("name", "Unknown Venue"),
+        "venue_name": venue.get("venue_name", venue.get("name", "Unknown Venue")),
         "venue_type": venue.get("venue_type", "other"),
-        "location": venue.get("location", {}),
-        "city": venue.get("city", "Unknown City"),
-        "rating": venue.get("rating"),
-        "price_range": venue.get("price_range"),
-        "opening_hours": venue.get("opening_hours"),
-        "contact_info": venue.get("contact_info"),
-        "created_at": datetime.utcnow(),   # ✅ fixed
-        "updated_at": datetime.utcnow()    # ✅ fixed
+        "opening_hours": venue.get("opening_hours", {"open_at": "", "close_at": ""}),  # Dictionary format
+        "time_slots": venue.get("time_slots", []),  # Empty for now
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
     }
 
 # --- Save discovered venues directly into Mongo ---
@@ -85,24 +91,27 @@ async def save_discovered_venues_to_db(venues: List[dict]):
         try:
             venue_data = normalize_venue(venue)
 
-            # Avoid duplicates (by name + city)
-            existing = venues_collection.find_one({
-                "name": venue_data["name"],
-                "location.city": venue_data["location"].get("city")
-            })
+            # Use Google place_id as the venue ID for MongoDB
+            venue_id = venue.get("venue_id", venue.get("id"))  # Support both field names
+            
+            # Avoid duplicates by checking Google place_id
+            existing = venues_collection.find_one({"google_place_id": venue_id})
             if existing:
-                logger.info(f"Venue {venue_data['name']} already exists, skipping")
+                logger.info(f"Venue with place_id {venue_id} already exists, skipping")
                 continue
+            
+            # Add Google place_id to venue data
+            venue_data["google_place_id"] = venue_id
 
             # Insert into MongoDB (venues)
             result = venues_collection.insert_one(venue_data)
             saved_count += 1
-            logger.info(f"Saved venue: {venue_data['name']} (ID: {result.inserted_id})")
+            logger.info(f"Saved venue: {venue_data['venue_name']} (ID: {result.inserted_id})")
 
             # --- Also insert into time_slots ---
             time_slot_doc = {
-                "venue_id": str(result.inserted_id),
-                "venue_name": venue_data["name"],
+                "venue_id": venue_id,  # Use Google place_id
+                "venue_name": venue_data["venue_name"],
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
                 "date": None,
@@ -112,10 +121,10 @@ async def save_discovered_venues_to_db(venues: List[dict]):
                 "status": "available"
             }
             time_slots_collection.insert_one(time_slot_doc)
-            logger.info(f"Created initial time_slot for venue: {venue_data['name']}")
+            logger.info(f"Created initial time_slot for venue: {venue_data['venue_name']}")
 
         except Exception as e:
-            logger.error(f"❌ Failed to save venue {venue.get('name')}: {e}")
+            logger.error(f"❌ Failed to save venue {venue.get('venue_name', venue.get('name'))}: {e}")
             continue
 
     logger.info(f"Successfully saved {saved_count} new venues")
@@ -217,19 +226,14 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
         for venues in venues_by_type.values():
             for venue in venues:
                 venue_dict = {
-                    "name": venue.name,
+                    "id": venue.id,  # Google place_id (for compatibility with save function)
+                    "venue_name": venue.name,
                     "venue_type": venue.venue_type.value,
-                    "location": {
-                        "latitude": venue.location.latitude,
-                        "longitude": venue.location.longitude,
-                        "address": venue.location.address,
-                        "city": venue.location.city,
-                        "country": venue.location.country
+                    "opening_hours": {  # Dictionary format
+                        "open_at": "",
+                        "close_at": ""
                     },
-                    "rating": venue.rating,
-                    "price_range": venue.price_range,
-                    "amenities": venue.amenities,
-                    "links": [link.dict() for link in venue.links] if venue.links else []
+                    "time_slots": []  # Empty for now
                 }
                 all_venues_for_saving.append(venue_dict)
 
