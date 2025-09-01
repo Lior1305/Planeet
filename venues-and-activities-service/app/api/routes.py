@@ -75,7 +75,8 @@ def normalize_venue(venue: Dict) -> Dict:
     return {
         "venue_name": venue.get("venue_name", venue.get("name", "Unknown Venue")),
         "venue_type": venue.get("venue_type", "other"),
-        "opening_hours": venue.get("opening_hours", {"open_at": "", "close_at": ""}),  # Dictionary format
+        "opening_hours": venue.get("opening_hours", {"open_at": "", "close_at": ""}),
+        "time_slots": venue.get("time_slots", []),  # Add this line to preserve time_slots
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
@@ -118,8 +119,14 @@ async def save_discovered_venues_to_db(venues: List[dict]):
             time_slots_result = await generate_time_slots_for_venue(str(result.inserted_id), venue_name)
             
             if time_slots_result:
+                # Store the generated time slots back to the venue document
+                time_slots = time_slots_result.get('time_slots', [])
+                venues_collection.update_one(
+                    {"_id": result.inserted_id},
+                    {"$set": {"time_slots": time_slots}}
+                )
                 time_slots_generated += 1
-                logger.info(f"✅ Time slots generated for: {venue_name}")
+                logger.info(f"✅ Time slots generated and stored for: {venue_name}")
             else:
                 logger.warning(f"⚠️ Failed to generate time slots for: {venue_name}")
 
@@ -229,10 +236,7 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
                     "id": venue.id,  # Google place_id
                     "venue_name": venue.name,
                     "venue_type": venue.venue_type.value,
-                    "opening_hours": {
-                        "open_at": "",
-                        "close_at": ""
-                    },
+                    "opening_hours": venue.opening_hours if hasattr(venue, 'opening_hours') else {"open_at": "", "close_at": ""},
                     "time_slots": []
                 }
                 all_venues_for_saving.append(venue_dict)

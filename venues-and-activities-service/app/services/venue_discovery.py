@@ -151,6 +151,9 @@ class VenueDiscovery:
             # Extract amenities from place types
             amenities = self._extract_amenities_from_types(place.get("types", []))
             
+            # Extract opening hours from place details
+            opening_hours = self._extract_opening_hours(details.get("opening_hours", {}))
+            
             # Create venue links
             links = []
             
@@ -175,6 +178,7 @@ class VenueDiscovery:
                 price_range=price_range,
                 amenities=amenities,
                 links=links,
+                opening_hours=opening_hours,  # Add this line
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow()
             )
@@ -239,6 +243,75 @@ class VenueDiscovery:
                 amenities.append(type_to_amenity[place_type])
         
         return amenities
+
+    def _extract_opening_hours(self, opening_hours_data: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Extract opening hours from Google Places API opening_hours data
+        
+        Args:
+            opening_hours_data: Raw opening hours data from Google Places API
+            
+        Returns:
+            Dictionary with open_at and close_at times for today
+        """
+        try:
+            if not opening_hours_data or "periods" not in opening_hours_data:
+                return {"open_at": "", "close_at": ""}
+            
+            # Get today's weekday (0 = Monday, 6 = Sunday)
+            from datetime import datetime
+            today = datetime.now().weekday()
+            
+            # Google uses 0 = Sunday, 6 = Saturday, so we need to adjust
+            google_weekday = (today + 1) % 7
+            
+            # Find today's opening period
+            for period in opening_hours_data.get("periods", []):
+                if period.get("open", {}).get("day") == google_weekday:
+                    open_time = period["open"].get("time", "")
+                    close_time = period.get("close", {}).get("time", "")
+                    
+                    # Convert Google's time format (HHMM) to readable format (HH:MM)
+                    open_formatted = self._format_time(open_time)
+                    close_formatted = self._format_time(close_time)
+                    
+                    return {
+                        "open_at": open_formatted,
+                        "close_at": close_formatted
+                    }
+            
+            # If no specific time for today, check if it's open 24/7
+            if opening_hours_data.get("open_now") is True:
+                return {"open_at": "00:00", "close_at": "23:59"}
+            
+            return {"open_at": "", "close_at": ""}
+            
+        except Exception as e:
+            logger.error(f"Error extracting opening hours: {e}")
+            return {"open_at": "", "close_at": ""}
+
+    def _format_time(self, time_str: str) -> str:
+        """
+        Convert Google's time format (HHMM) to readable format (HH:MM)
+        
+        Args:
+            time_str: Time in Google format (e.g., "0900", "1430")
+            
+        Returns:
+            Formatted time string (e.g., "09:00", "14:30")
+        """
+        try:
+            if not time_str or len(time_str) != 4:
+                return ""
+            
+            hour = int(time_str[:2])
+            minute = int(time_str[2:])
+            
+            return f"{hour:02d}:{minute:02d}"
+            
+        except Exception as e:
+            logger.error(f"Error formatting time {time_str}: {e}")
+            return ""
 
 # Global instance
 venue_discovery = VenueDiscovery()
