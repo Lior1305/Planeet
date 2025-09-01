@@ -145,7 +145,7 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
         
         for venue_type in venue_types:
             venues = await venue_discovery.discover_venues_for_type(
-                venue_type, location, radius_km, user_preferences, 20  # Get more venues for planning service to choose from
+                venue_type, location, radius_km, user_preferences, 10  # Get more venues for planning service to choose from
             )
             
             # Apply personalization and ranking within each venue type

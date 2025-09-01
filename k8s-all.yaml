@@ -268,7 +268,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v3.0.0
+          image: dartoledano/venues-service:v3.2.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
