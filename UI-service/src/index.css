@@ -328,6 +328,105 @@ code {
   margin-right: auto;
 }
 
+/* Loading overlay styles */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.loading-content {
+  background: var(--background);
+  border-radius: var(--radius);
+  padding: 32px;
+  text-align: center;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border);
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.loading-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.loading-steps {
+  text-align: left;
+  margin-top: 16px;
+}
+
+.loading-step {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.loading-step.active {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.loading-step.completed {
+  color: var(--success);
+}
+
+.loading-step-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 10px;
+}
+
+.loading-step-icon.pending {
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.loading-step-icon.active {
+  background: var(--primary);
+  color: white;
+}
+
+.loading-step-icon.completed {
+  background: var(--success);
+  color: white;
+}
+
 /* Modal styles */
 .modal-overlay {
   position: fixed;
