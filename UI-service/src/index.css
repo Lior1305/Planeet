@@ -1377,3 +1377,123 @@ code {
     gap: 1px;
   }
 }
+
+/* Rating Modal Styles */
+.rating-modal {
+  max-width: 600px;
+}
+
+.rating-intro {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--background-alt);
+  border-radius: var(--radius);
+}
+
+.rating-intro p {
+  margin: 0 0 12px 0;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.rating-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rating-legend span {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.venues-rating-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.venue-rating-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--background-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.venue-rating-item .venue-info {
+  flex: 1;
+}
+
+.venue-rating-item .venue-name {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.venue-rating-item .venue-type {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--border);
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 4px;
+  border-radius: var(--radius);
+}
+
+.star-button:hover {
+  color: #ffd700;
+  transform: scale(1.1);
+}
+
+.star-button.filled {
+  color: #ffd700;
+}
+
+.star-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.rating-value {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Responsive design for rating modal */
+@media (max-width: 768px) {
+  .venue-rating-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .rating-stars {
+    align-self: flex-end;
+  }
+  
+  .rating-legend {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
