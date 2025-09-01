@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 # Import database storage and services
 from app.db import get_venues_collection
-from app.services.planning_integration import planning_integration
-from app.services.personalization import personalization_service
+
+
 from app.services.venue_discovery import venue_discovery
 
 # Helper functions
@@ -155,15 +155,10 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
         venue_types = venue_request.venue_types
         location = venue_request.location.dict()
         radius_km = venue_request.radius_km
-        user_id = venue_request.user_id
-        use_personalization = venue_request.use_personalization
         
         logger.info(f"Starting venue discovery for types: {venue_types}")
         
-        # Get user preferences if personalization is enabled
-        user_preferences = None
-        if use_personalization and user_id:
-            user_preferences = await planning_integration.get_user_preferences(user_id)
+
         
         # Discover venues for each requested type
         venues_by_type = {}
@@ -171,17 +166,12 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
         
         for venue_type in venue_types:
             venues = await venue_discovery.discover_venues_for_type(
-                venue_type, location, radius_km, user_preferences, 20
+                venue_type, location, radius_km, 10  # Get more venues for planning service to choose from
             )
             
-            # Apply personalization and ranking within each venue type
-            if user_preferences and use_personalization:
-                ranked_venues = personalization_service.personalize_venue_list(
-                    venues, user_preferences
-                )
-                venues_by_type[venue_type] = [venue for venue, score in ranked_venues[:20]]
-            else:
-                venues_by_type[venue_type] = venues
+            # No personalization here - planning service will handle it
+            # Just return raw venue data for the planning service to process
+            venues_by_type[venue_type] = venues
                 
             total_venues_found += len(venues_by_type[venue_type])
             logger.info(f"Discovered {len(venues_by_type[venue_type])} venues for type {venue_type}")
@@ -225,7 +215,6 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
             venue_types_requested=venue_types,
             location=venue_request.location,
             radius_km=radius_km,
-            personalization_applied=use_personalization and user_preferences is not None,
             discovered_at=datetime.utcnow().isoformat()
         )
 
@@ -566,137 +555,4 @@ async def get_service_stats():
         "venue_types": venue_types
     }
 
-def get_venue_by_google_place_id(google_place_id: str) -> Venue:
-    """Get a venue by Google place_id"""
-    venues_collection = get_venues_collection()
-    venue_doc = venues_collection.find_one({"google_place_id": google_place_id})
-    if not venue_doc:
-        raise HTTPException(status_code=404, detail="Venue not found")
-    return Venue(**venue_doc)
-
-
-async def generate_time_slots_for_venue(venue_id: str, venue_name: str):
-    """
-    Call booking service to generate time slots for a venue
-    """
-    try:
-        # Get booking service URL from environment variable, with fallback
-        # The booking service uses /v1 prefix, so include it
-        booking_service_url = os.getenv(
-            "BOOKING_SERVICE_URL", 
-            "http://booking-service:8001/v1/generate-time-slots"  # Keep /v1
-        )
-        
-        logger.info(f"Calling booking service to generate time slots for venue: {venue_name} (ID: {venue_id})")
-        logger.info(f"Booking service URL: {booking_service_url}")
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                booking_service_url,
-                json={
-                    "venue_id": venue_id,
-                    "default_counter": 100
-                },
-                timeout=30.0
-            )
-            
-            logger.info(f"Booking service response status: {response.status_code}")
-            
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Successfully generated time slots for venue: {venue_name}")
-                logger.info(f"Generated {len(result.get('time_slots', []))} time slots")
-                return result
-            else:
-                logger.warning(f"❌ Failed to generate time slots for venue {venue_name}: {response.status_code} - {response.text}")
-                return None
-                
-    except httpx.ConnectError as e:
-        logger.error(f"❌ Connection error to booking service: {str(e)}")
-        return None
-    except httpx.TimeoutException as e:
-        logger.error(f"❌ Timeout error to booking service: {str(e)}")
-        return None
-    except Exception as e:
-        logger.error(f"❌ Error generating time slots for venue {venue_name}: {str(e)}")
-        return None
-
-@router.post("/venues/{venue_id}/generate-time-slots")
-async def generate_time_slots_for_venue_endpoint(venue_id: str):
-    """
-    Manually generate time slots for a specific venue
-    """
-    try:
-        # First verify the venue exists
-        venue = get_venue_by_id(venue_id)
-        if not venue:
-            raise HTTPException(status_code=404, detail="Venue not found")
-        
-        # Call booking service to generate time slots
-        result = await generate_time_slots_for_venue(venue_id, venue.name)
-        
-        if result:
-            return {
-                "success": True,
-                "venue_id": venue_id,
-                "venue_name": venue.name,
-                "time_slots_generated": True,
-                "message": f"Successfully generated time slots for {venue.name}",
-                "time_slots_count": len(result.get("time_slots", []))
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to generate time slots")
-            
-    except Exception as e:
-        logger.error(f"Error generating time slots: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/venues/generate-time-slots/batch")
-async def generate_time_slots_batch(venue_ids: List[str]):
-    """
-    Generate time slots for multiple venues at once
-    """
-    try:
-        results = []
-        
-        for venue_id in venue_ids:
-            try:
-                venue = get_venue_by_id(venue_id)
-                if venue:
-                    result = await generate_time_slots_for_venue(venue_id, venue.name)
-                    results.append({
-                        "venue_id": venue_id,
-                        "venue_name": venue.name,
-                        "success": result is not None,
-                        "message": "Time slots generated" if result else "Failed to generate",
-                        "time_slots_count": len(result.get("time_slots", [])) if result else 0
-                    })
-                else:
-                    results.append({
-                        "venue_id": venue_id,
-                        "success": False,
-                        "message": "Venue not found",
-                        "time_slots_count": 0
-                    })
-            except Exception as e:
-                results.append({
-                    "venue_id": venue_id,
-                    "success": False,
-                    "message": str(e),
-                    "time_slots_count": 0
-                })
-        
-        successful = len([r for r in results if r["success"]])
-        failed = len([r for r in results if not r["success"]])
-        
-        return {
-            "total_venues": len(venue_ids),
-            "successful": successful,
-            "failed": failed,
-            "results": results,
-            "summary": f"Generated time slots for {successful} venues, failed for {failed} venues"
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 

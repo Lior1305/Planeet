@@ -120,7 +120,7 @@ spec:
     spec:
       containers:
         - name: outing-profile-service
-          image: nikaklimenchuk/outing-profile-service:v1.7
+          image: nikaklimenchuk/outing-profile-service:v2.1
           ports:
             - containerPort: 5000
           env:
@@ -228,7 +228,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v1.0.3
+          image: dartoledano/planning-service:v1.0.6
           ports:
             - containerPort: 8001
           env:
@@ -280,7 +280,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v1.4
+          image: dartoledano/venues-service:v1.5.1
           ports:
             - containerPort: 8000
           env:
@@ -340,7 +340,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.24
+          image: nikaklimenchuk/planeet-ui:react-v1.9.27
           ports:
             - containerPort: 80
           env:
@@ -368,56 +368,126 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
-  type: LoadBalancer
-
+  type: ClusterIP
 ---
-# =============================== 
-# Ingress Resource - working with ingress not getting to the users tho
+# ===============================
+# Users Ingress (fixed trailing slash)
 # ===============================
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: planeet-ingress
+  name: users-ingress
   namespace: planeet
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /users$1
+    nginx.ingress.kubernetes.io/rewrite-target: /users$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
-          # This rule will handle all requests for the users-service
-          - path: /api/users/?(.*)
+          - path: /api/users(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
                 name: users-service
                 port:
                   number: 80
-          - path: /api/planning
-            pathType: Prefix
+---
+# ===============================
+# Planning Ingress
+# ===============================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: planning-ingress
+  namespace: planeet
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api/planning(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: planning-service
                 port:
                   number: 8001
-          - path: /api/venues
-            pathType: Prefix
+---
+# ===============================
+# Venues Ingress
+# ===============================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: venues-ingress
+  namespace: planeet
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /venues/$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api/venues(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: venues-service
                 port:
                   number: 8000
-          - path: /api/outing
-            pathType: Prefix
+---
+# ===============================
+# Outing Profile Ingress
+# ===============================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: outing-ingress
+  namespace: planeet
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api/outing(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: outing-profile-service
                 port:
                   number: 80
-          # UI frontend catch-all
-          - path: /
-            pathType: Prefix
+---
+# ===============================
+# UI Ingress
+# ===============================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ui-ingress
+  namespace: planeet
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: ui-service

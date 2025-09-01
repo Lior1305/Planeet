@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import outingProfileService from '../services/outingProfileService.js';
 import userService from '../services/userService.js';
+import RatingModal from './RatingModal.js';
 
 const OutingHistory = () => {
   const [outingHistory, setOutingHistory] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('future'); // 'future' or 'past'
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [selectedOuting, setSelectedOuting] = useState(null);
   
   const currentUser = userService.getCurrentUser();
 
@@ -76,6 +79,116 @@ const OutingHistory = () => {
     } catch {
       return timeString;
     }
+  };
+
+  const formatDurationMinutes = (minutes) => {
+    if (!minutes) return '';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+    return `${mins}m`;
+  };
+
+  const getVenueTypeIcon = (venueType) => {
+    const icons = {
+      restaurant: '🍽️',
+      cafe: '☕',
+      bar: '🍺',
+      museum: '🏛️',
+      theater: '🎭',
+      park: '🌳',
+      spa: '💆‍♀️',
+      shopping_center: '🛍️',
+      sports_facility: '⚽',
+      other: '📍'
+    };
+    return icons[venueType] || '📍';
+  };
+
+  const renderVenueDetails = (outing) => {
+    // Check if we have selected plan data with venues
+    if (outing.selected_plan && outing.selected_plan.suggested_venues) {
+      return (
+        <div className="venue-details">
+          <h4 className="venue-details-title">Selected Venues:</h4>
+                         <div className="venue-list">
+                 {outing.selected_plan.suggested_venues.map((venue, index) => (
+                   <div key={venue.venue_id || index} className="venue-item">
+                     <span className="venue-icon">{getVenueTypeIcon(venue.venue_type)}</span>
+                     <div className="venue-info">
+                       <span className="venue-name">{venue.name}</span>
+                       <span className="venue-type">{venue.venue_type}</span>
+                       
+                       {/* Timing Information */}
+                       {(venue.start_time || venue.end_time) && (
+                         <div className="venue-timing-compact">
+                           {venue.start_time && venue.end_time && (
+                             <span className="timing-info-compact">
+                               🕒 {formatTime(venue.start_time)} - {formatTime(venue.end_time)}
+                             </span>
+                           )}
+                           {venue.duration_minutes && (
+                             <span className="duration-info-compact">
+                               ⏱️ {formatDurationMinutes(venue.duration_minutes)}
+                             </span>
+                           )}
+                         </div>
+                       )}
+                       
+                                               {/* Travel Information */}
+                        {(venue.travel_distance_km || venue.travel_time_from_previous) && (
+                          <div className="venue-travel-compact">
+                            {venue.travel_distance_km && venue.travel_distance_km > 0 && (
+                              <span className="distance-info-compact">
+                                {venue.travel_distance_km < 2 ? '🚶‍♂️' : '🚗'} {venue.travel_distance_km}km
+                              </span>
+                            )}
+                            {venue.travel_time_from_previous && venue.travel_time_from_previous > 0 && (
+                              <span className="travel-time-info-compact">
+                                {venue.travel_distance_km < 2 ? '🚶‍♂️' : '🚗'} {venue.travel_time_from_previous}min
+                              </span>
+                            )}
+                            {(!venue.travel_distance_km || venue.travel_distance_km === 0) && 
+                             (!venue.travel_time_from_previous || venue.travel_time_from_previous === 0) && (
+                              <span className="travel-time-info-compact">
+                                🏁 Start
+                              </span>
+                            )}
+                          </div>
+                        )}
+                     </div>
+                   </div>
+                 ))}
+               </div>
+        </div>
+      );
+    }
+    
+    // Fallback: just show venue types if no detailed venue data
+    return (
+      <div className="venue-details">
+        <h4 className="venue-details-title">Venue Types:</h4>
+        <div className="venue-types">
+          {outing.venue_types.map((type, index) => (
+            <span key={index} className="venue-type-badge">
+              {getVenueTypeIcon(type)} {type}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const handleRateOuting = (outing) => {
+    setSelectedOuting(outing);
+    setRatingModalOpen(true);
+  };
+
+  const handleRatingSubmitted = () => {
+    // Reload the outing history to show updated ratings
+    loadOutingHistory();
   };
 
   if (!currentUser) {
@@ -160,13 +273,7 @@ const OutingHistory = () => {
                       <span className="outing-group">👥 {outing.group_size} people</span>
                     </div>
                     
-                    <div className="venue-types">
-                      {outing.venue_types.map((type, index) => (
-                        <span key={index} className="venue-type-badge">
-                          {type}
-                        </span>
-                      ))}
-                    </div>
+                    {renderVenueDetails(outing)}
                   </div>
 
                   <div className="outing-actions">
@@ -219,16 +326,19 @@ const OutingHistory = () => {
                       <span className="outing-group">👥 {outing.group_size} people</span>
                     </div>
                     
-                    <div className="venue-types">
-                      {outing.venue_types.map((type, index) => (
-                        <span key={index} className="venue-type-badge">
-                          {type}
-                        </span>
-                      ))}
-                    </div>
+                    {renderVenueDetails(outing)}
                   </div>
 
                   <div className="outing-actions">
+                    {!outing.venue_ratings && outing.selected_plan && outing.selected_plan.suggested_venues && (
+                      <button
+                        onClick={() => handleRateOuting(outing)}
+                        className="btn btn-primary btn-sm"
+                        title="Rate this outing"
+                      >
+                        ⭐ Rate
+                      </button>
+                    )}
                     <button
                       onClick={() => deleteOuting(outing.plan_id, currentUser.id)}
                       className="btn btn-outline btn-sm"
@@ -243,6 +353,14 @@ const OutingHistory = () => {
           )}
         </div>
       )}
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={ratingModalOpen}
+        onClose={() => setRatingModalOpen(false)}
+        outing={selectedOuting}
+        onRatingSubmitted={handleRatingSubmitted}
+      />
     </div>
   );
 };

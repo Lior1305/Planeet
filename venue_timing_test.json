@@ -1,0 +1,20 @@
+{
+  "user_id": "venue-timing-showcase",
+  "venue_types": ["cafe", "restaurant", "museum"],
+  "location": {
+    "latitude": 40.7589,
+    "longitude": -73.9851,
+    "address": "Central Park West, New York, NY",
+    "city": "New York",
+    "country": "USA"
+  },
+  "radius_km": 3.0,
+  "date": "2024-03-15T11:00:00",
+  "duration_hours": 5.0,
+  "group_size": 2,
+  "budget_range": "$$",
+  "min_rating": 4.0,
+  "use_personalization": true,
+  "max_venues": 3,
+  "include_links": true
+}

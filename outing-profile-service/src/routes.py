@@ -354,4 +354,82 @@ def update_expired_outings():
         
     except Exception as e:
         logger.error(f"Error updating expired outings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/outing-history/<plan_id>/ratings', methods=['POST'])
+def add_outing_ratings(plan_id):
+    """Add ratings for venues in a past outing"""
+    try:
+        data = request.get_json()
+        user_id = data.get("user_id")
+        venue_ratings = data.get("venue_ratings", [])
+        
+        if not user_id:
+            logger.warning("Missing user_id in request")
+            return jsonify({"error": "user_id is required"}), 400
+        
+        if not venue_ratings:
+            logger.warning("Missing venue_ratings in request")
+            return jsonify({"error": "venue_ratings is required"}), 400
+        
+        # Validate venue ratings
+        for rating in venue_ratings:
+            venue_id = rating.get("venue_id")
+            rating_value = rating.get("rating")
+            
+            if not venue_id:
+                logger.warning("Missing venue_id in venue rating")
+                return jsonify({"error": "venue_id is required for each rating"}), 400
+            
+            if not isinstance(rating_value, int) or rating_value < 1 or rating_value > 5:
+                logger.warning(f"Invalid rating value: {rating_value}")
+                return jsonify({"error": "rating must be an integer between 1 and 5"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Check if the outing exists and is a past outing
+        profile = profiles_collection.find_one(
+            {"user_id": user_id, "outing_history.plan_id": plan_id},
+            {"outing_history.$": 1}
+        )
+        
+        if not profile:
+            logger.warning(f"Outing not found for plan_id: {plan_id} and user_id: {user_id}")
+            return jsonify({"error": "Outing not found"}), 404
+        
+        outing = profile["outing_history"][0]
+        
+        # Check if outing is in the past
+        try:
+            outing_date = datetime.fromisoformat(outing["outing_date"]).date()
+            outing_time = outing.get("outing_time", "00:00")
+            outing_datetime = datetime.combine(outing_date, datetime.strptime(outing_time, "%H:%M").time())
+            current_datetime = datetime.now()
+            
+            if outing_datetime >= current_datetime:
+                logger.warning(f"Cannot rate future outing: {plan_id}")
+                return jsonify({"error": "Cannot rate future outings"}), 400
+        except:
+            logger.warning(f"Invalid outing date format for plan_id: {plan_id}")
+            return jsonify({"error": "Invalid outing date format"}), 400
+        
+        # Add ratings to the outing
+        result = profiles_collection.update_one(
+            {"user_id": user_id, "outing_history.plan_id": plan_id},
+            {"$set": {"outing_history.$.venue_ratings": venue_ratings}}
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"Ratings added for outing plan_id: {plan_id}, user_id: {user_id}")
+            return jsonify({
+                "message": "Ratings added successfully",
+                "plan_id": plan_id,
+                "venue_ratings": venue_ratings
+            }), 200
+        else:
+            logger.warning(f"Failed to add ratings for plan_id: {plan_id}")
+            return jsonify({"error": "Failed to add ratings"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error adding outing ratings: {e}")
         return jsonify({"error": str(e)}), 500 

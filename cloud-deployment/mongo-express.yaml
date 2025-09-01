@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-express
+  namespace: planeet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-express
+  template:
+    metadata:
+      labels:
+        app: mongo-express
+    spec:
+      containers:
+        - name: mongo-express
+          image: mongo-express:1.0.0-alpha.4
+          ports:
+            - containerPort: 8081
+          env:
+            - name: ME_CONFIG_MONGODB_SERVER
+              value: "mongo"
+            - name: VCAP_APP_HOST
+              value: "0.0.0.0"
+            - name: VCAP_APP_PORT
+              value: "8081"
+            - name: ME_CONFIG_SITE_BASEURL
+              value: "/"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-express
+  namespace: planeet
+spec:
+  selector:
+    app: mongo-express
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+  type: ClusterIP
+
+
+# gcloud auth login
+# gcloud config set project planeet-470412
+# gcloud container clusters get-credentials planeet-cluster --zone us-central1-a
+# kubectl get pods -n planeet
+# kubectl port-forward -n planeet svc/mongo-express 8081:8081
+# enter : http://localhost:8081/
