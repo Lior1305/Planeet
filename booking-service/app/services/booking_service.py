@@ -136,24 +136,51 @@ class BookingService:
         """
         Generate time slots in 2-hour intervals from start_time to end_time
         Format: "HH:MM-HH:MM"
+        Handles cases where remaining time is less than 2 hours
         """
         slots = []
         
-        # Parse start and end times
-        start_hour = int(start_time.split(':')[0])
-        end_hour = int(end_time.split(':')[0])
-        
-        # Generate 2-hour slots
-        for hour in range(start_hour, end_hour - 1, 2):
-            slot_start = f"{hour:02d}:00"
-            slot_end = f"{hour + 2:02d}:00"
-            slot = {
-                "hours": f"{slot_start}-{slot_end}",
-                "counter": default_counter
-            }
-            slots.append(slot)
-        
-        return slots
+        try:
+            # Parse start and end times
+            start_hour = int(start_time.split(':')[0])
+            end_hour = int(end_time.split(':')[0])
+            
+            # Validate times
+            if start_hour >= end_hour:
+                logger.warning(f"Invalid time range: {start_time} to {end_time}")
+                return []
+            
+            # Generate 2-hour slots
+            current_hour = start_hour
+            while current_hour < end_hour:
+                slot_start = f"{current_hour:02d}:00"
+                
+                # Calculate slot end - either 2 hours later or closing time
+                if current_hour + 2 <= end_hour:
+                    slot_end = f"{current_hour + 2:02d}:00"
+                else:
+                    # Handle remaining time (less than 2 hours)
+                    slot_end = f"{end_hour:02d}:00"
+                
+                slot = {
+                    "hours": f"{slot_start}-{slot_end}",
+                    "counter": default_counter
+                }
+                slots.append(slot)
+                
+                # Move to next slot
+                current_hour += 2
+                
+                # If we've reached or passed the end time, break
+                if current_hour >= end_hour:
+                    break
+            
+            logger.info(f"Generated {len(slots)} time slots from {start_time} to {end_time}")
+            return slots
+            
+        except Exception as e:
+            logger.error(f"Error generating time slots: {e}")
+            return []
     
     @staticmethod
     async def generate_venue_time_slots(request: TimeSlotGenerationRequest) -> TimeSlotGenerationResponse:
@@ -169,23 +196,12 @@ class BookingService:
             if not venue:
                 raise Exception("Venue not found")
             
-            # Get opening hours - handle different formats
-            open_hours = venue.get("open_hours", {})
+            # Get opening hours - handle the correct field name from venues service
+            opening_hours = venue.get("opening_hours", {})
             
-            # Try different possible formats
-            start_time = None
-            end_time = None
-            
-            if open_hours:
-                # Format 1: start/end
-                start_time = open_hours.get("start")
-                end_time = open_hours.get("end")
-                
-                # Format 2: open_at/close_at
-                if not start_time:
-                    start_time = open_hours.get("open_at")
-                if not end_time:
-                    end_time = open_hours.get("close_at")
+            # Extract open_at and close_at times
+            start_time = opening_hours.get("open_at")
+            end_time = opening_hours.get("close_at")
             
             # If no opening hours defined, use default hours
             if not start_time or not end_time:

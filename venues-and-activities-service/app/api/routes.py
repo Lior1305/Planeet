@@ -7,6 +7,7 @@ import httpx  # Add this import
 from bson import ObjectId
 from datetime import datetime
 from typing import List, Dict
+import os
 
 
 from app.models.schemas import (
@@ -116,19 +117,19 @@ async def save_discovered_venues_to_db(venues: List[dict]):
             
             # Generate time slots immediately after saving
             venue_name = venue_data.get('venue_name', 'Unknown')
-            time_slots_result = await generate_time_slots_for_venue(str(result.inserted_id), venue_name)
             
-            if time_slots_result:
-                # Store the generated time slots back to the venue document
-                time_slots = time_slots_result.get('time_slots', [])
-                venues_collection.update_one(
-                    {"_id": result.inserted_id},
-                    {"$set": {"time_slots": time_slots}}
-                )
-                time_slots_generated += 1
-                logger.info(f"✅ Time slots generated and stored for: {venue_name}")
-            else:
-                logger.warning(f"⚠️ Failed to generate time slots for: {venue_name}")
+            try:
+                # Call the function that makes HTTP request to booking service
+                time_slots_result = await generate_time_slots_for_venue(str(result.inserted_id), venue_name)
+                
+                if time_slots_result:
+                    time_slots_generated += 1
+                    logger.info(f"✅ Time slots generated for: {venue_name}")
+                else:
+                    logger.warning(f"⚠️ Failed to generate time slots for {venue_name}")
+                    
+            except Exception as e:
+                logger.error(f"❌ Error generating time slots for {venue_name}: {e}")
 
         except Exception as e:
             logger.error(f"❌ Failed to save venue {venue.get('venue_name', venue.get('name'))}: {e}")
@@ -579,8 +580,12 @@ async def generate_time_slots_for_venue(venue_id: str, venue_name: str):
     Call booking service to generate time slots for a venue
     """
     try:
-        # Booking service URL - adjust port as needed
-        booking_service_url = "http://localhost:8001/v1/generate-time-slots"
+        # Get booking service URL from environment variable, with fallback
+        # The booking service uses /v1 prefix, so include it
+        booking_service_url = os.getenv(
+            "BOOKING_SERVICE_URL", 
+            "http://booking-service:8001/v1/generate-time-slots"  # Keep /v1
+        )
         
         logger.info(f"Calling booking service to generate time slots for venue: {venue_name} (ID: {venue_id})")
         logger.info(f"Booking service URL: {booking_service_url}")
