@@ -424,6 +424,10 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
               <div className={`form-step ${currentStep === 4 ? 'active' : ''}`}>
                 <div className="form-group">
                   <label className="form-label">Venue Types *</label>
+                  <div className="form-help" style={{ marginBottom: 
+                    '16px' }}>
+                    <span>🎯 Select the types of venues you'd like to include in your plan. The venues in your generated plan will be chosen from these selected categories.</span>
+                  </div>
                   <div className="checkbox-group">
                     {planningService.getVenueTypeOptions().map(option => (
                       <div key={option.value} className="checkbox-item">

@@ -211,7 +211,7 @@ def get_outing_history():
                     # Mark as completed for this response
                     outing["status"] = "completed"
                 
-                if outing_date >= today:
+                if outing_datetime > current_datetime:
                     future_outings.append(outing)
                 else:
                     past_outings.append(outing)

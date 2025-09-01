@@ -2,8 +2,8 @@
 Models for plan requests and responses between Planning Service and Venues Service
 """
 
-from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, field_validator, field_serializer
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
 
@@ -37,7 +37,7 @@ class PlanRequest(BaseModel):
     radius_km: float = Field(10.0, gt=0, le=100, description="Search radius in kilometers")
     
     # Timing requirements
-    date: datetime = Field(..., description="Date and time for the outing")
+    date: Union[datetime, str] = Field(..., description="Date and time for the outing")
     duration_hours: Optional[float] = Field(None, description="Expected duration in hours")
     
     # Group and preferences
@@ -57,11 +57,23 @@ class PlanRequest(BaseModel):
     
     @field_validator('date')
     @classmethod
-    def validate_start_time_15_minute_intervals(cls, v: datetime) -> datetime:
+    def validate_start_time_15_minute_intervals(cls, v: Union[datetime, str]) -> datetime:
         """
         Validate that the start time is in 15-minute intervals
         Valid times: XX:00, XX:15, XX:30, XX:45
         """
+        # If it's a string, parse it as a naive datetime (local time)
+        if isinstance(v, str):
+            try:
+                # Parse as naive datetime (no timezone)
+                v = datetime.fromisoformat(v.replace('Z', ''))
+            except ValueError:
+                raise ValueError(f"Invalid datetime format: {v}")
+        
+        # If the datetime is timezone-aware, convert to naive datetime (local time)
+        if v.tzinfo is not None:
+            v = v.replace(tzinfo=None)
+        
         if v.minute not in [0, 15, 30, 45]:
             valid_times = ["XX:00", "XX:15", "XX:30", "XX:45"]
             raise ValueError(
