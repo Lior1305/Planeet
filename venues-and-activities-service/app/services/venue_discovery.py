@@ -7,9 +7,7 @@ from datetime import datetime
 import uuid
 import logging
 
-from app.models.schemas import Venue, UserPreferences, VenueType, Location, VenueLink
-from app.services.personalization import personalization_service
-from app.services.planning_integration import planning_integration
+from app.models.schemas import Venue, VenueType, Location, VenueLink
 from app.services.place_finder import search_places, get_place_details
 
 logger = logging.getLogger(__name__)
@@ -25,7 +23,6 @@ class VenueDiscovery:
         venue_type: str, 
         location: Dict[str, Any], 
         radius_km: float,
-        user_preferences: Optional[UserPreferences],
         max_venues_per_type: int
     ) -> List[Venue]:
         """
@@ -35,7 +32,6 @@ class VenueDiscovery:
             venue_type: Type of venue to search for
             location: Location coordinates and address
             radius_km: Search radius in kilometers
-            user_preferences: User preferences for filtering
             max_venues_per_type: Maximum number of venues to discover for each type
             
         Returns:
@@ -106,7 +102,7 @@ class VenueDiscovery:
             "park": "park",
             "shopping_center": "shopping_mall",
             "sports_facility": "gym",  # Google uses gym
-            "hotel": "lodging",
+            "spa": "spa",
             "other": "establishment"  # Generic establishment
         }
         return type_mapping.get(venue_type, "establishment")

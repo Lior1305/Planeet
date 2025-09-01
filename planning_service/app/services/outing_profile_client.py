@@ -173,6 +173,65 @@ class OutingProfileClient:
             logger.error(f"Unexpected error when deleting preferences for user {user_id}: {e}")
             return False
     
+    async def get_user_venue_ratings(self, user_id: str) -> Dict[str, float]:
+        """
+        Get user's venue rating history from Outing-Profile-Service
+        
+        Args:
+            user_id: The user's unique identifier
+            
+        Returns:
+            Dictionary mapping venue_id to average rating (e.g., {"venue_id": 4.5})
+        """
+        try:
+            response = await self.client.get(
+                f"{self.outing_profile_service_url}/outing-history?user_id={user_id}"
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                past_outings = data.get("past_outings", [])
+                
+                # Extract venue ratings from all past outings
+                venue_ratings = {}
+                venue_rating_counts = {}
+                
+                for outing in past_outings:
+                    ratings = outing.get("venue_ratings", [])
+                    for rating_entry in ratings:
+                        venue_id = rating_entry.get("venue_id")
+                        rating = rating_entry.get("rating")
+                        
+                        if venue_id and rating:
+                            if venue_id not in venue_ratings:
+                                venue_ratings[venue_id] = 0
+                                venue_rating_counts[venue_id] = 0
+                            
+                            venue_ratings[venue_id] += rating
+                            venue_rating_counts[venue_id] += 1
+                
+                # Calculate average ratings
+                avg_ratings = {}
+                for venue_id, total_rating in venue_ratings.items():
+                    avg_ratings[venue_id] = total_rating / venue_rating_counts[venue_id]
+                
+                logger.info(f"Retrieved {len(avg_ratings)} venue ratings for user {user_id}")
+                return avg_ratings
+                
+            elif response.status_code == 404:
+                logger.info(f"No rating history found for user {user_id}")
+                return {}
+            else:
+                logger.error(f"Error fetching ratings for user {user_id}: {response.status_code}")
+                return {}
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when fetching ratings for user {user_id}: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Unexpected error when fetching ratings for user {user_id}: {e}")
+            return {}
+    
     async def close(self):
         """Close the HTTP client"""
         await self.client.aclose()

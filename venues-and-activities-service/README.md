@@ -151,7 +151,7 @@ The service integrates with Google Places API to provide real-time venue discove
 - **park** → Google Places "park"
 - **shopping_center** → Google Places "shopping_mall"
 - **sports_facility** → Google Places "gym"
-- **hotel** → Google Places "lodging"
+- **spa** → Google Places "spa"
 
 ### **Data Extraction**
 - **Location**: Coordinates, address, city extraction

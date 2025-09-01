@@ -12,7 +12,7 @@ class VenueType(str, Enum):
     PARK = "park"
     SHOPPING_CENTER = "shopping_center"
     SPORTS_FACILITY = "sports_facility"
-    HOTEL = "hotel"
+    SPA = "spa"
     OTHER = "other"
 
 class Location(BaseModel):
@@ -44,15 +44,14 @@ class Venue(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
-# User Preference Models (for integration with Planning Service)
+
 # Venue Discovery Models (NEW)
 class VenueDiscoveryRequest(BaseModel):
     """Request model for venue discovery from Google Places API"""
     venue_types: List[str] = Field(..., description="Types of venues to discover")
     location: Location = Field(..., description="Location for venue search")
     radius_km: float = Field(10.0, gt=0, le=100, description="Search radius in kilometers")
-    user_id: Optional[str] = Field(None, description="User identifier for personalization")
-    use_personalization: bool = Field(True, description="Whether to apply personalization")
+
 
 class VenueDiscoveryResponse(BaseModel):
     """Response model for venue discovery"""
@@ -61,60 +60,8 @@ class VenueDiscoveryResponse(BaseModel):
     venue_types_requested: List[str] = Field(..., description="Venue types that were requested")
     location: Location = Field(..., description="Search location")
     radius_km: float = Field(..., description="Search radius used")
-    personalization_applied: bool = Field(..., description="Whether personalization was applied")
+
     discovered_at: str = Field(..., description="Timestamp when venues were discovered")
-
-class UserPreferences(BaseModel):
-    user_id: str = Field(..., description="User identifier")
-    preferred_venue_types: Optional[List[VenueType]] = Field(None, description="Preferred venue types")
-    preferred_price_range: Optional[str] = Field(None, description="Preferred price range")
-    preferred_amenities: Optional[List[str]] = Field(None, description="Preferred amenities")
-    preferred_cities: Optional[List[str]] = Field(None, description="Preferred cities")
-    min_rating: Optional[float] = Field(None, ge=0, le=5, description="Minimum preferred rating")
-    dietary_restrictions: Optional[List[str]] = Field(None, description="Dietary restrictions (e.g., vegetarian, vegan)")
-    accessibility_needs: Optional[List[str]] = Field(None, description="Accessibility requirements")
-    activity_level: Optional[str] = Field(None, description="Preferred activity level (low, medium, high)")
-    group_size: Optional[int] = Field(None, description="Typical group size for outings")
-    time_preferences: Optional[Dict[str, str]] = Field(None, description="Preferred times for different activities")
-    special_interests: Optional[List[str]] = Field(None, description="Special interests or hobbies")
-
-class PersonalizedSearchRequest(BaseModel):
-    user_id: str = Field(..., description="User identifier for personalized search")
-    query: Optional[str] = Field(None, description="Search query text")
-    location: Optional[Location] = Field(None, description="Search location")
-    radius_km: Optional[float] = Field(10.0, gt=0, le=100, description="Search radius in kilometers")
-    venue_types: Optional[List[VenueType]] = Field(None, description="Filter by venue types (overrides user preferences)")
-    min_rating: Optional[float] = Field(None, ge=0, le=5, description="Minimum rating filter (overrides user preferences)")
-    max_price: Optional[float] = Field(None, ge=0, description="Maximum price filter (overrides user preferences)")
-    amenities: Optional[List[str]] = Field(None, description="Required amenities (overrides user preferences)")
-    open_now: Optional[bool] = Field(None, description="Filter for currently open venues")
-    limit: Optional[int] = Field(20, gt=0, le=100, description="Maximum number of results")
-    offset: Optional[int] = Field(0, ge=0, description="Pagination offset")
-    use_preferences: bool = Field(True, description="Whether to use user preferences for personalization")
-
-class SearchRequest(BaseModel):
-    query: Optional[str] = Field(None, description="Search query text")
-    location: Optional[Location] = Field(None, description="Search location")
-    radius_km: Optional[float] = Field(10.0, gt=0, le=100, description="Search radius in kilometers")
-    venue_types: Optional[List[VenueType]] = Field(None, description="Filter by venue types")
-    min_rating: Optional[float] = Field(None, ge=0, le=5, description="Minimum rating filter")
-    max_price: Optional[float] = Field(None, ge=0, description="Maximum price filter")
-    amenities: Optional[List[str]] = Field(None, description="Required amenities")
-    open_now: Optional[bool] = Field(None, description="Filter for currently open venues")
-    limit: Optional[int] = Field(20, gt=0, le=100, description="Maximum number of results")
-    offset: Optional[int] = Field(0, ge=0, description="Pagination offset")
-
-class SearchResponse(BaseModel):
-    venues: List[Venue] = Field(..., description="List of matching venues")
-    total_count: int = Field(..., description="Total number of results")
-    has_more: bool = Field(..., description="Whether there are more results available")
-
-class PersonalizedSearchResponse(BaseModel):
-    venues: List[Venue] = Field(..., description="List of matching venues")
-    total_count: int = Field(..., description="Total number of results")
-    has_more: bool = Field(..., description="Whether there are more results available")
-    user_preferences_used: Optional[UserPreferences] = Field(None, description="User preferences that were applied")
-    personalization_score: Optional[float] = Field(None, description="How well the results match user preferences (0-1)")
 
 class VenueCreate(BaseModel):
     name: str = Field(..., description="Venue name")
