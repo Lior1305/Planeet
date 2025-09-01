@@ -138,26 +138,22 @@ const OutingHistory = () => {
                        )}
                        
                                                {/* Travel Information */}
-                        {(venue.travel_distance_km || venue.travel_time_from_previous) && (
-                          <div className="venue-travel-compact">
-                            {venue.travel_distance_km && venue.travel_distance_km > 0 && (
+                        <div className="venue-travel-compact">
+                          {venue.travel_distance_km && venue.travel_distance_km > 0 && venue.travel_time_from_previous && venue.travel_time_from_previous > 0 ? (
+                            <>
                               <span className="distance-info-compact">
                                 {venue.travel_distance_km < 2 ? '🚶‍♂️' : '🚗'} {venue.travel_distance_km}km
                               </span>
-                            )}
-                            {venue.travel_time_from_previous && venue.travel_time_from_previous > 0 && (
                               <span className="travel-time-info-compact">
                                 {venue.travel_distance_km < 2 ? '🚶‍♂️' : '🚗'} {venue.travel_time_from_previous}min
                               </span>
-                            )}
-                            {(!venue.travel_distance_km || venue.travel_distance_km === 0) && 
-                             (!venue.travel_time_from_previous || venue.travel_time_from_previous === 0) && (
-                              <span className="travel-time-info-compact">
-                                🏁 Start
-                              </span>
-                            )}
-                          </div>
-                        )}
+                            </>
+                          ) : (
+                            <span className="travel-time-info-compact">
+                              🏁 Start
+                            </span>
+                          )}
+                        </div>
                      </div>
                    </div>
                  ))}
