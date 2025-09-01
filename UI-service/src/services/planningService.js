@@ -169,7 +169,7 @@ class PlanningService {
       { value: 'park', label: 'Park' },
       { value: 'shopping_center', label: 'Shopping Center' },
       { value: 'sports_facility', label: 'Sports Facility' },
-      { value: 'hotel', label: 'Hotel' },
+      { value: 'spa', label: 'Spa' },
       { value: 'other', label: 'Other' }
     ];
   }
