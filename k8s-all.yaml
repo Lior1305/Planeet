@@ -268,7 +268,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v4.1.2
+          image: dartoledano/venues-service:v4.1.8
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -280,7 +280,7 @@ spec:
             - name: MONGO_URI
               value: "mongodb://mongo:27017/planeet"
             - name: BOOKING_SERVICE_URL
-              value: "http://booking-service:8004"  # ✅ Just the base URL
+              value: "http://booking-service-internal:8004"
           resources:
             requests:
               memory: "256Mi"
@@ -305,7 +305,6 @@ spec:
       nodePort: 30003
   type: NodePort
 
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -322,10 +321,10 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v2.0.8
+          image: liorberlin/booking-service:v2.1.1
           imagePullPolicy: Always
           ports:
-            - containerPort: 8004
+            - containerPort: 8004  # container listens on 8004
           env:
             - name: PORT
               value: "8004"
@@ -340,8 +339,23 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
-
 ---
+# Internal ClusterIP service (service-to-service inside k8s)
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service-internal
+spec:
+  selector:
+    app: booking-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8004        # internal service port
+      targetPort: 8004  # container port
+  type: ClusterIP
+---
+# External NodePort service (for Postman / localhost testing)
 apiVersion: v1
 kind: Service
 metadata:
@@ -352,7 +366,7 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 8004
-      targetPort: 8004
-      nodePort: 30006
+      port: 8004        # internal service port
+      targetPort: 8004  # container port
+      nodePort: 30006   # external port on localhost
   type: NodePort

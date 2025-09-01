@@ -3,9 +3,8 @@ from datetime import datetime
 from typing import Dict, Any
 from app.models import BookingRequest, BookingResponse, BookingError, TimeSlotGenerationRequest, TimeSlotGenerationResponse
 from app.services.booking_service import BookingService
-from app.database import connect_to_mongo
+from app.database import connect_to_mongo, get_venues_collection  # ✅ Fixed import
 from bson import ObjectId
-from app.db.mongo import get_venues_collection  # ⚠️ adjust import path if different
 
 
 router = APIRouter()
