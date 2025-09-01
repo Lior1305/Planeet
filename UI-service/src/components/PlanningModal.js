@@ -3,6 +3,7 @@ import planningService from '../services/planningService.js';
 import userService from '../services/userService.js';
 import outingProfileService from '../services/outingProfileService.js';
 import GeneratedPlansModal from './GeneratedPlansModal.js';
+import CustomTimePicker from './CustomTimePicker.js';
 
 const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -27,6 +28,31 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
       setCities(planningService.getAllCities());
     }
   }, [isOpen]);
+
+  // Function to validate and adjust time to 15-minute increments
+  const validateAndAdjustTime = (timeString) => {
+    if (!timeString) return timeString;
+    
+    try {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) return timeString;
+      
+      // Round minutes to nearest 15-minute increment
+      const adjustedMinutes = Math.round(minutes / 15) * 15;
+      
+      // Handle overflow (e.g., 45 -> 60 should become next hour)
+      let adjustedHours = hours;
+      if (adjustedMinutes === 60) {
+        adjustedHours = (hours + 1) % 24;
+        adjustedMinutes = 0;
+      }
+      
+      // Format back to HH:MM
+      return `${adjustedHours.toString().padStart(2, '0')}:${adjustedMinutes.toString().padStart(2, '0')}`;
+    } catch {
+      return timeString;
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -54,7 +80,13 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
         });
       }
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      // Special handling for time input to enforce 15-minute increments
+      if (name === 'planTime') {
+        const adjustedTime = validateAndAdjustTime(value);
+        setFormData(prev => ({ ...prev, [name]: adjustedTime }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
     }
     
     // Clear error when user starts typing
@@ -375,31 +407,17 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
 
                 <div className="form-group">
                   <label htmlFor="planTime" className="form-label">Time *</label>
-                  <input
-                    type="time"
-                    id="planTime"
-                    name="planTime"
-                    className="form-input"
+                  <CustomTimePicker
                     value={formData.planTime}
                     onChange={handleInputChange}
                     required
                   />
+                  <div className="form-help">
+                    <span>⏰ Time selection in 15-minute increments (00, 15, 30, 45)</span>
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="durationHours" className="form-label">Duration (Hours)</label>
-                  <input
-                    type="number"
-                    id="durationHours"
-                    name="durationHours"
-                    className="form-input"
-                    value={formData.durationHours}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="12"
-                    step="0.5"
-                  />
-                </div>
+
               </div>
 
               {/* Step 4: Venue Types */}

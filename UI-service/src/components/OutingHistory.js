@@ -81,6 +81,16 @@ const OutingHistory = () => {
     }
   };
 
+  const formatDurationMinutes = (minutes) => {
+    if (!minutes) return '';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+    return `${mins}m`;
+  };
+
   const getVenueTypeIcon = (venueType) => {
     const icons = {
       restaurant: '🍽️',
@@ -103,17 +113,55 @@ const OutingHistory = () => {
       return (
         <div className="venue-details">
           <h4 className="venue-details-title">Selected Venues:</h4>
-          <div className="venue-list">
-            {outing.selected_plan.suggested_venues.map((venue, index) => (
-              <div key={venue.venue_id || index} className="venue-item">
-                <span className="venue-icon">{getVenueTypeIcon(venue.venue_type)}</span>
-                <div className="venue-info">
-                  <span className="venue-name">{venue.name}</span>
-                  <span className="venue-type">{venue.venue_type}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                         <div className="venue-list">
+                 {outing.selected_plan.suggested_venues.map((venue, index) => (
+                   <div key={venue.venue_id || index} className="venue-item">
+                     <span className="venue-icon">{getVenueTypeIcon(venue.venue_type)}</span>
+                     <div className="venue-info">
+                       <span className="venue-name">{venue.name}</span>
+                       <span className="venue-type">{venue.venue_type}</span>
+                       
+                       {/* Timing Information */}
+                       {(venue.start_time || venue.end_time) && (
+                         <div className="venue-timing-compact">
+                           {venue.start_time && venue.end_time && (
+                             <span className="timing-info-compact">
+                               🕒 {formatTime(venue.start_time)} - {formatTime(venue.end_time)}
+                             </span>
+                           )}
+                           {venue.duration_minutes && (
+                             <span className="duration-info-compact">
+                               ⏱️ {formatDurationMinutes(venue.duration_minutes)}
+                             </span>
+                           )}
+                         </div>
+                       )}
+                       
+                                               {/* Travel Information */}
+                        {(venue.travel_distance_km || venue.travel_time_from_previous) && (
+                          <div className="venue-travel-compact">
+                            {venue.travel_distance_km && venue.travel_distance_km > 0 && (
+                              <span className="distance-info-compact">
+                                {venue.travel_distance_km < 2 ? '🚶‍♂️' : '🚗'} {venue.travel_distance_km}km
+                              </span>
+                            )}
+                            {venue.travel_time_from_previous && venue.travel_time_from_previous > 0 && (
+                              <span className="travel-time-info-compact">
+                                {venue.travel_distance_km < 2 ? '🚶‍♂️' : '🚗'} {venue.travel_time_from_previous}min
+                              </span>
+                            )}
+                            {(!venue.travel_distance_km || venue.travel_distance_km === 0) && 
+                             (!venue.travel_time_from_previous || venue.travel_time_from_previous === 0) && (
+                              <span className="travel-time-info-compact">
+                                🏁 Start
+                              </span>
+                            )}
+                          </div>
+                        )}
+                     </div>
+                   </div>
+                 ))}
+               </div>
         </div>
       );
     }
