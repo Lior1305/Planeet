@@ -232,7 +232,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v1.0.3
+          image: dartoledano/planning-service:v1.0.4
           ports:
             - containerPort: 8001
           env:
@@ -288,7 +288,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v1.4
+          image: dartoledano/venues-service:v4.0.3
           ports:
             - containerPort: 8000
           env:

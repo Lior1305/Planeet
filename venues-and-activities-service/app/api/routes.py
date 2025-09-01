@@ -10,8 +10,7 @@ from typing import List, Dict
 
 from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
-    SearchRequest, SearchResponse, PersonalizedSearchRequest, PersonalizedSearchResponse,
-    MessageResponse, PaginatedResponse, UserPreferences,
+    MessageResponse, PaginatedResponse,
     VenueType,
     VenueDiscoveryRequest, VenueDiscoveryResponse
 )
@@ -24,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 # Import database storage and services
 from app.db import get_venues_collection
-from app.services.planning_integration import planning_integration
-from app.services.personalization import personalization_service
+
+
 from app.services.venue_discovery import venue_discovery
 
 # Helper functions
@@ -129,15 +128,10 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
         venue_types = venue_request.venue_types
         location = venue_request.location.dict()
         radius_km = venue_request.radius_km
-        user_id = venue_request.user_id
-        use_personalization = venue_request.use_personalization
         
         logger.info(f"Starting venue discovery for types: {venue_types}")
         
-        # Get user preferences if personalization is enabled
-        user_preferences = None
-        if use_personalization and user_id:
-            user_preferences = await planning_integration.get_user_preferences(user_id)
+
         
         # Discover venues for each requested type
         venues_by_type = {}
@@ -145,18 +139,12 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
         
         for venue_type in venue_types:
             venues = await venue_discovery.discover_venues_for_type(
-                venue_type, location, radius_km, user_preferences, 20  # Get more venues for planning service to choose from
+                venue_type, location, radius_km, 10  # Get more venues for planning service to choose from
             )
             
-            # Apply personalization and ranking within each venue type
-            if user_preferences and use_personalization:
-                ranked_venues = personalization_service.personalize_venue_list(
-                    venues, user_preferences
-                )
-                # Extract venues and scores, keep top 20 for planning service
-                venues_by_type[venue_type] = [venue for venue, score in ranked_venues[:20]]
-            else:
-                venues_by_type[venue_type] = venues
+            # No personalization here - planning service will handle it
+            # Just return raw venue data for the planning service to process
+            venues_by_type[venue_type] = venues
                 
             total_venues_found += len(venues_by_type[venue_type])
             logger.info(f"Discovered {len(venues_by_type[venue_type])} venues for type {venue_type}")
@@ -200,7 +188,6 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
             venue_types_requested=venue_types,
             location=venue_request.location,
             radius_km=radius_km,
-            personalization_applied=use_personalization and user_preferences is not None,
             discovered_at=datetime.utcnow().isoformat()
         )
 
