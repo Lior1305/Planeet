@@ -96,7 +96,6 @@ class PlanningService {
         use_personalization: true,
         include_links: true,
         date: new Date(`${formData.planDate}T${formData.planTime}`).toISOString(),
-        duration_hours: formData.durationHours,
         group_size: formData.groupSize,
         budget_range: formData.budgetRange,
         min_rating: formData.minRating,
@@ -138,6 +137,13 @@ class PlanningService {
     const now = new Date();
     now.setHours(now.getHours() + 1);
     
+    // Round time to nearest 15-minute increment
+    const minutes = now.getMinutes();
+    const roundedMinutes = Math.round(minutes / 15) * 15;
+    now.setMinutes(roundedMinutes);
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+    
     return {
       planName: '',
       groupSize: 2,
@@ -147,7 +153,6 @@ class PlanningService {
       longitude: null,
       planDate: tomorrow.toISOString().split('T')[0],
       planTime: now.toTimeString().slice(0, 5),
-      durationHours: 3,
       venueTypes: [],
       budgetRange: 'medium',
       minRating: 4.0,
