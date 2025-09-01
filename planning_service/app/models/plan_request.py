@@ -16,7 +16,7 @@ class VenueType(str, Enum):
     PARK = "park"
     SHOPPING_CENTER = "shopping_center"
     SPORTS_FACILITY = "sports_facility"
-    HOTEL = "hotel"
+    SPA = "spa"
     OTHER = "other"
 
 class Location(BaseModel):

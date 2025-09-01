@@ -75,7 +75,37 @@ async def create_plan(plan_request: PlanRequest):
         
         logger.info(f"Discovered venues for {len(venues_by_type)} venue types")
         
-        # Step 3: Generate multiple plans using our plan generator
+        # Step 3: Apply enhanced personalization based on user rating history
+        if plan_request.use_personalization:
+            try:
+                # Get user's venue rating history for personalization
+                user_rating_history = await outing_profile_client.get_user_venue_ratings(plan_request.user_id)
+                logger.info(f"Retrieved rating history for {len(user_rating_history)} venues")
+                
+                if user_rating_history or user_preferences:
+                    from app.services.personalization import planning_personalization_service
+                    
+                    # Apply personalization to venues
+                    personalized_venues = planning_personalization_service.personalize_venues(
+                        venues_by_type, user_rating_history, user_preferences
+                    )
+                    
+                    # Convert back to list format for plan generation (take top 10 per type)
+                    for venue_type in venues_by_type:
+                        if venue_type in personalized_venues:
+                            # Take top 10 personalized venues per type
+                            venues_by_type[venue_type] = [
+                                venue for venue, score in personalized_venues[venue_type][:10]
+                            ]
+                    
+                    logger.info("Applied enhanced personalization with user rating history")
+                else:
+                    logger.info("No user rating history or preferences available, skipping personalization")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to apply personalization: {e}. Continuing with original venues.")
+        
+        # Step 4: Generate multiple plans using our plan generator
         from app.services.plan_generator import plan_generator
         
         plan_response = await plan_generator.generate_multiple_plans(venues_by_type, plan_request)

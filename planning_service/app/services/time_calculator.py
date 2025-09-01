@@ -23,7 +23,7 @@ class TimeCalculator:
         "park": 60,            # Walking and relaxation
         "shopping_center": 90, # Shopping and browsing
         "sports_facility": 120, # Activities and sports
-        "hotel": 30,           # Check-in or brief visit
+        "spa": 90,             # Spa treatment session
         "other": 60            # Default duration
     }
     
