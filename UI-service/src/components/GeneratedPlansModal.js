@@ -14,6 +14,19 @@ const GeneratedPlansModal = ({ plans, onPlanSelection, onRegenerate, onClose }) 
     return `${duration} hour${duration !== 1 ? 's' : ''}`;
   };
 
+  const getVenueTypeIcon = (venueType) => {
+    const icons = {
+      restaurant: '🍽️',
+      cafe: '☕',
+      bar: '🍺',
+      museum: '🏛️',
+      theater: '🎭',
+      park: '🌳',
+      spa: '💆‍♀️'
+    };
+    return icons[venueType] || '📍';
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal generated-plans-modal" onClick={(e) => e.stopPropagation()}>
@@ -46,18 +59,23 @@ const GeneratedPlansModal = ({ plans, onPlanSelection, onRegenerate, onClose }) 
                   </div>
                 </div>
 
-                <div className="venues-list">
+                <div className="venues-grid">
                   {plan.suggested_venues.map((venue) => (
-                    <div key={venue.venue_id} className="venue-item">
-                      <div className="venue-header">
-                        <h4 className="venue-name">{venue.name}</h4>
+                    <div key={venue.venue_id} className="venue-card">
+                      <div className="venue-card-header">
+                        <div className="venue-icon">
+                          {getVenueTypeIcon(venue.venue_type)}
+                        </div>
                         <div className="venue-badges">
-                          <span className="venue-type-badge">{venue.venue_type}</span>
                           <span className="venue-rating">⭐ {venue.rating}</span>
                           <span className="venue-price">{formatPriceRange(venue.price_range)}</span>
                         </div>
                       </div>
-                      <p className="venue-address">{venue.address}</p>
+                      <div className="venue-card-content">
+                        <h4 className="venue-name">{venue.name}</h4>
+                        <p className="venue-type">{venue.venue_type}</p>
+                        <p className="venue-address">{venue.address}</p>
+                      </div>
                       {venue.url_link && (
                         <a 
                           href={venue.url_link} 

@@ -78,6 +78,58 @@ const OutingHistory = () => {
     }
   };
 
+  const getVenueTypeIcon = (venueType) => {
+    const icons = {
+      restaurant: '🍽️',
+      cafe: '☕',
+      bar: '🍺',
+      museum: '🏛️',
+      theater: '🎭',
+      park: '🌳',
+      spa: '💆‍♀️',
+      shopping_center: '🛍️',
+      sports_facility: '⚽',
+      other: '📍'
+    };
+    return icons[venueType] || '📍';
+  };
+
+  const renderVenueDetails = (outing) => {
+    // Check if we have selected plan data with venues
+    if (outing.selected_plan && outing.selected_plan.suggested_venues) {
+      return (
+        <div className="venue-details">
+          <h4 className="venue-details-title">Selected Venues:</h4>
+          <div className="venue-list">
+            {outing.selected_plan.suggested_venues.map((venue, index) => (
+              <div key={venue.venue_id || index} className="venue-item">
+                <span className="venue-icon">{getVenueTypeIcon(venue.venue_type)}</span>
+                <div className="venue-info">
+                  <span className="venue-name">{venue.name}</span>
+                  <span className="venue-type">{venue.venue_type}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    // Fallback: just show venue types if no detailed venue data
+    return (
+      <div className="venue-details">
+        <h4 className="venue-details-title">Venue Types:</h4>
+        <div className="venue-types">
+          {outing.venue_types.map((type, index) => (
+            <span key={index} className="venue-type-badge">
+              {getVenueTypeIcon(type)} {type}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   if (!currentUser) {
     return (
       <div className="outing-history-container">
@@ -160,13 +212,7 @@ const OutingHistory = () => {
                       <span className="outing-group">👥 {outing.group_size} people</span>
                     </div>
                     
-                    <div className="venue-types">
-                      {outing.venue_types.map((type, index) => (
-                        <span key={index} className="venue-type-badge">
-                          {type}
-                        </span>
-                      ))}
-                    </div>
+                    {renderVenueDetails(outing)}
                   </div>
 
                   <div className="outing-actions">
@@ -219,13 +265,7 @@ const OutingHistory = () => {
                       <span className="outing-group">👥 {outing.group_size} people</span>
                     </div>
                     
-                    <div className="venue-types">
-                      {outing.venue_types.map((type, index) => (
-                        <span key={index} className="venue-type-badge">
-                          {type}
-                        </span>
-                      ))}
-                    </div>
+                    {renderVenueDetails(outing)}
                   </div>
 
                   <div className="outing-actions">
