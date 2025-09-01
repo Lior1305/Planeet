@@ -320,7 +320,7 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v1.9
+          image: liorberlin/booking-service:v1.
           imagePullPolicy: Always
           ports:
             - containerPort: 8004
