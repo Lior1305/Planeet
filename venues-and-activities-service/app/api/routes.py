@@ -12,7 +12,8 @@ from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
     SearchRequest, SearchResponse, PersonalizedSearchRequest, PersonalizedSearchResponse,
     MessageResponse, PaginatedResponse, UserPreferences,
-    VenueType, TimeSlot, TimeSlotCreate, TimeSlotUpdate, TimeSlotSearchRequest, TimeSlotSearchResponse, TimeSlotStatus
+    VenueType,
+    VenueDiscoveryRequest, VenueDiscoveryResponse
 )
 
 # Initialize router
@@ -22,22 +23,32 @@ router = APIRouter(prefix="/api/v1", tags=["venues"])
 logger = logging.getLogger(__name__)
 
 # Import database storage and services
-from app.db import get_venues_collection, get_time_slots_collection
+from app.db import get_venues_collection
 from app.services.planning_integration import planning_integration
 from app.services.personalization import personalization_service
-from app.services.plan_generator import plan_generator
+from app.services.venue_discovery import venue_discovery
 
 # Helper functions
 def get_venue_by_id(venue_id: str) -> Venue:
-    """Get venue by ID from MongoDB"""
+    """Get venue by ID from MongoDB - supports both MongoDB ObjectId and Google place_id"""
     venues_collection = get_venues_collection()
     
     try:
-        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+        # First try to find by Google place_id
+        venue_doc = venues_collection.find_one({"google_place_id": venue_id})
+        
+        # If not found, try MongoDB ObjectId (for backward compatibility)
+        if not venue_doc:
+            try:
+                venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+            except:
+                pass  # Invalid ObjectId format
+        
         if not venue_doc:
             raise HTTPException(status_code=404, detail="Venue not found")
         
-        venue_doc["id"] = str(venue_doc["_id"])
+        # Set the id field to Google place_id if available, otherwise MongoDB ObjectId
+        venue_doc["id"] = venue_doc.get("google_place_id", str(venue_doc["_id"]))
         return Venue(**venue_doc)
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -61,60 +72,42 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 def normalize_venue(venue: Dict) -> Dict:
     """Extract and normalize fields from Google Places venue data."""
     return {
-        "name": venue.get("name", "Unknown Venue"),
+        "venue_name": venue.get("venue_name", venue.get("name", "Unknown Venue")),
         "venue_type": venue.get("venue_type", "other"),
-        "location": venue.get("location", {}),
-        "city": venue.get("city", "Unknown City"),
-        "rating": venue.get("rating"),
-        "price_range": venue.get("price_range"),
-        "opening_hours": venue.get("opening_hours"),
-        "contact_info": venue.get("contact_info"),
-        "created_at": datetime.utcnow(),   # ✅ fixed
-        "updated_at": datetime.utcnow()    # ✅ fixed
+        "opening_hours": venue.get("opening_hours", {"open_at": "", "close_at": ""}),  # Dictionary format
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
     }
 
 # --- Save discovered venues directly into Mongo ---
 async def save_discovered_venues_to_db(venues: List[dict]):
     logger.info(f"Starting to save {len(venues)} venues to MongoDB")
     venues_collection = get_venues_collection()
-    time_slots_collection = get_time_slots_collection()
     saved_count = 0
 
     for venue in venues:
         try:
             venue_data = normalize_venue(venue)
 
-            # Avoid duplicates (by name + city)
-            existing = venues_collection.find_one({
-                "name": venue_data["name"],
-                "location.city": venue_data["location"].get("city")
-            })
+            # Use Google place_id as the venue ID for MongoDB
+            venue_id = venue.get("venue_id", venue.get("id"))  # Support both field names
+            
+            # Avoid duplicates by checking Google place_id
+            existing = venues_collection.find_one({"google_place_id": venue_id})
             if existing:
-                logger.info(f"Venue {venue_data['name']} already exists, skipping")
+                logger.info(f"Venue with place_id {venue_id} already exists, skipping")
                 continue
+            
+            # Add Google place_id to venue data
+            venue_data["google_place_id"] = venue_id
 
             # Insert into MongoDB (venues)
             result = venues_collection.insert_one(venue_data)
             saved_count += 1
-            logger.info(f"Saved venue: {venue_data['name']} (ID: {result.inserted_id})")
-
-            # --- Also insert into time_slots ---
-            time_slot_doc = {
-                "venue_id": str(result.inserted_id),
-                "venue_name": venue_data["name"],
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow(),
-                "date": None,
-                "start_time": None,
-                "end_time": None,
-                "capacity": None,
-                "status": "available"
-            }
-            time_slots_collection.insert_one(time_slot_doc)
-            logger.info(f"Created initial time_slot for venue: {venue_data['name']}")
+            logger.info(f"Saved venue: {venue_data['venue_name']} (ID: {result.inserted_id})")
 
         except Exception as e:
-            logger.error(f"❌ Failed to save venue {venue.get('name')}: {e}")
+            logger.error(f"❌ Failed to save venue {venue.get('venue_name', venue.get('name'))}: {e}")
             continue
 
     logger.info(f"Successfully saved {saved_count} new venues")
@@ -122,14 +115,129 @@ async def save_discovered_venues_to_db(venues: List[dict]):
 
 
 
-# Plan Generation Endpoint (NEW!)
+# Venue Discovery Endpoint (NEW!)
+@router.post("/venues/discover", response_model=VenueDiscoveryResponse)
+async def discover_venues(venue_request: VenueDiscoveryRequest):
+    """
+    Discover venues from Google Places API based on request criteria.
+    
+    This endpoint only handles venue discovery and returns raw venue data
+    for the Planning Service to use in creating plans.
+    """
+    try:
+        # Extract request data
+        venue_types = venue_request.venue_types
+        location = venue_request.location.dict()
+        radius_km = venue_request.radius_km
+        user_id = venue_request.user_id
+        use_personalization = venue_request.use_personalization
+        
+        logger.info(f"Starting venue discovery for types: {venue_types}")
+        
+        # Get user preferences if personalization is enabled
+        user_preferences = None
+        if use_personalization and user_id:
+            user_preferences = await planning_integration.get_user_preferences(user_id)
+        
+        # Discover venues for each requested type
+        venues_by_type = {}
+        total_venues_found = 0
+        
+        for venue_type in venue_types:
+            venues = await venue_discovery.discover_venues_for_type(
+                venue_type, location, radius_km, user_preferences, 20  # Get more venues for planning service to choose from
+            )
+            
+            # Apply personalization and ranking within each venue type
+            if user_preferences and use_personalization:
+                ranked_venues = personalization_service.personalize_venue_list(
+                    venues, user_preferences
+                )
+                # Extract venues and scores, keep top 20 for planning service
+                venues_by_type[venue_type] = [venue for venue, score in ranked_venues[:20]]
+            else:
+                venues_by_type[venue_type] = venues
+                
+            total_venues_found += len(venues_by_type[venue_type])
+            logger.info(f"Discovered {len(venues_by_type[venue_type])} venues for type {venue_type}")
+
+        # Convert venues to dictionaries for JSON serialization
+        serialized_venues_by_type = {}
+        for venue_type, venues in venues_by_type.items():
+            serialized_venues_by_type[venue_type] = [
+                {
+                    "id": venue.id,
+                    "name": venue.name,
+                    "description": venue.description,
+                    "venue_type": venue.venue_type.value,
+                    "location": {
+                        "latitude": venue.location.latitude,
+                        "longitude": venue.location.longitude,
+                        "address": venue.location.address,
+                        "city": venue.location.city,
+                        "country": venue.location.country
+                    },
+                    "rating": venue.rating,
+                    "price_range": venue.price_range,
+                    "amenities": venue.amenities or [],
+                    "links": [
+                        {
+                            "type": link.type,
+                            "url": link.url,
+                            "title": link.title,
+                            "description": link.description
+                        } for link in venue.links
+                    ] if venue.links else [],
+                    "created_at": venue.created_at.isoformat() if venue.created_at else None,
+                    "updated_at": venue.updated_at.isoformat() if venue.updated_at else None
+                }
+                for venue in venues
+            ]
+
+        response = VenueDiscoveryResponse(
+            venues_by_type=serialized_venues_by_type,
+            total_venues_found=total_venues_found,
+            venue_types_requested=venue_types,
+            location=venue_request.location,
+            radius_km=radius_km,
+            personalization_applied=use_personalization and user_preferences is not None,
+            discovered_at=datetime.utcnow().isoformat()
+        )
+
+        # Save discovered venues to MongoDB
+        all_venues_for_saving = []
+        for venues in venues_by_type.values():
+            for venue in venues:
+                venue_dict = {
+                    "id": venue.id,  # Google place_id (for compatibility with save function)
+                    "venue_name": venue.name,
+                    "venue_type": venue.venue_type.value,
+                    "opening_hours": {  # Dictionary format
+                        "open_at": "",
+                        "close_at": ""
+                    },
+                    "time_slots": []  # Empty for now
+                }
+                all_venues_for_saving.append(venue_dict)
+
+        if all_venues_for_saving:
+            logger.info(f"Saving {len(all_venues_for_saving)} discovered venues to MongoDB...")
+            await save_discovered_venues_to_db(all_venues_for_saving)
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error in venue discovery endpoint: {e}")
+        raise HTTPException(status_code=500, detail=f"Venue discovery failed: {str(e)}")
+
+# Plan Generation Endpoint (DEPRECATED - keeping for backward compatibility)
 @router.post("/plans/generate", response_model=dict)
 async def generate_venue_plan(plan_request: dict):
     """
-    Generate a comprehensive venue plan based on Planning Service request.
+    DEPRECATED: Generate a comprehensive venue plan based on Planning Service request.
     
-    This endpoint receives plan requests from the Planning Service and returns
-    a complete plan with venue suggestions, costs, durations, and travel routes.
+    This endpoint is deprecated. Use /venues/discover for venue discovery and 
+    let the Planning Service handle plan creation.
     """
     try:
         # Validate required fields
@@ -401,191 +509,6 @@ async def get_venue_links(venue_id: str = Path(..., description="Venue ID")):
     venue = get_venue_by_id(venue_id)
     return venue.links or []
 
-# Personalized search endpoints
-@router.post("/search/personalized", response_model=PersonalizedSearchResponse)
-async def personalized_search_venues(request: PersonalizedSearchRequest):
-    """Search for venues with personalization based on user preferences"""
-    # Get user preferences from planning service
-    user_preferences = None
-    if request.use_preferences:
-        user_preferences = await planning_integration.get_user_preferences(request.user_id)
-    
-    # Perform base search
-    matching_venues = await _perform_base_search(request)
-    
-    # Apply personalization if preferences are available
-    if user_preferences and request.use_preferences:
-        # Personalize the venue list
-        personalized_venues = personalization_service.personalize_venue_list(matching_venues, user_preferences)
-        
-        # Extract venues and scores
-        venues_with_scores = personalized_venues
-        venues = [venue for venue, score in venues_with_scores]
-        
-        # Calculate average personalization score
-        if venues_with_scores:
-            avg_score = sum(score for _, score in venues_with_scores) / len(venues_with_scores)
-        else:
-            avg_score = 0.0
-    else:
-        venues = matching_venues
-        avg_score = None
-    
-    # Apply pagination
-    total_count = len(venues)
-    limit = request.limit or 20
-    offset = request.offset or 0
-    
-    paginated_venues = venues[offset:offset + limit]
-    has_more = offset + limit < total_count
-    
-    return PersonalizedSearchResponse(
-        venues=paginated_venues,
-        total_count=total_count,
-        has_more=has_more,
-        user_preferences_used=user_preferences,
-        personalization_score=avg_score
-    )
-
-@router.get("/recommendations/{user_id}", response_model=List[Venue])
-async def get_personalized_recommendations(
-    user_id: str = Path(..., description="User ID"),
-    limit: int = Query(10, ge=1, le=50, description="Maximum number of recommendations")
-):
-    """Get personalized venue recommendations for a user"""
-    # Get user preferences
-    user_preferences = await planning_integration.get_user_preferences(user_id)
-    
-    if not user_preferences:
-        raise HTTPException(status_code=404, detail="No preferences found for user")
-    
-    # Get all venues from MongoDB
-    venues_collection = get_venues_collection()
-    venues_cursor = venues_collection.find({})
-    
-    all_venues = []
-    for venue_doc in venues_cursor:
-        venue_doc["id"] = str(venue_doc["_id"])
-        all_venues.append(Venue(**venue_doc))
-    
-    # Get personalized recommendations
-    recommendations = personalization_service.get_personalized_recommendations(
-        all_venues, user_preferences, limit
-    )
-    
-    # Return just the venues (without scores)
-    return [venue for venue, score in recommendations]
-
-# Search endpoints
-@router.post("/search", response_model=SearchResponse)
-async def search_venues(request: SearchRequest):
-    """Search for venues based on criteria"""
-    matching_venues = await _perform_base_search(request)
-    
-    # Apply pagination
-    total_count = len(matching_venues)
-    limit = request.limit or 20
-    offset = request.offset or 0
-    
-    # Pagination
-    paginated_venues = matching_venues[offset:offset + limit]
-    has_more = offset + limit < total_count
-    
-    return SearchResponse(
-        venues=paginated_venues,
-        total_count=total_count,
-        has_more=has_more
-    )
-
-@router.get("/search/quick", response_model=SearchResponse)
-async def quick_search(
-    query: str = Query(..., description="Search query"),
-    limit: int = Query(10, ge=1, le=50, description="Maximum results")
-):
-    """Quick search by text query"""
-    venues_collection = get_venues_collection()
-    
-    # Build text search query
-    search_query = {
-        "$or": [
-            {"name": {"$regex": query, "$options": "i"}},
-            {"description": {"$regex": query, "$options": "i"}},
-            {"location.city": {"$regex": query, "$options": "i"}}
-        ]
-    }
-    
-    # Get matching venues
-    venues_cursor = venues_collection.find(search_query).limit(limit)
-    
-    matching_venues = []
-    for venue_doc in venues_cursor:
-        venue_doc["id"] = str(venue_doc["_id"])
-        matching_venues.append(Venue(**venue_doc))
-    
-    total_count = len(matching_venues)
-    
-    return SearchResponse(
-        venues=matching_venues,
-        total_count=total_count,
-        has_more=False
-    )
-
-# Helper function for base search logic
-async def _perform_base_search(request) -> List[Venue]:
-    """Perform base search filtering logic using MongoDB"""
-    venues_collection = get_venues_collection()
-    
-    # Build filter query
-    filter_query = {}
-    
-    # Type filtering
-    if request.venue_types:
-        filter_query["venue_type"] = {"$in": request.venue_types}
-    
-    # Rating filtering
-    if request.min_rating is not None:
-        filter_query["rating"] = {"$gte": request.min_rating}
-    
-    # Price filtering (simplified - could be enhanced)
-    if request.max_price is not None:
-        # This is a simplified approach - you might want to store actual price ranges
-        # or implement more sophisticated price filtering
-        pass
-    
-    # Amenities filtering
-    if request.amenities:
-        filter_query["amenities"] = {"$all": request.amenities}
-    
-    # Get venues from MongoDB
-    venues_cursor = venues_collection.find(filter_query)
-    
-    matching_venues = []
-    for venue_doc in venues_cursor:
-        venue_doc["id"] = str(venue_doc["_id"])
-        venue = Venue(**venue_doc)
-        
-        # Location-based filtering (post-query since we need to calculate distances)
-        if request.location:
-            distance = calculate_distance(
-                request.location.latitude, request.location.longitude,
-                venue.location.latitude, venue.location.longitude
-            )
-            if distance > request.radius_km:
-                continue
-        
-        # Price filtering (post-query)
-        if request.max_price is not None:
-            # Simple price range parsing (could be enhanced)
-            if venue.price_range == "$$$" and request.max_price < 50:
-                continue
-            elif venue.price_range == "$$" and request.max_price < 25:
-                continue
-            elif venue.price_range == "$" and request.max_price < 10:
-                continue
-        
-        matching_venues.append(venue)
-    
-    return matching_venues
 
 # Utility endpoints
 @router.get("/venue-types", response_model=List[str])
@@ -620,126 +543,4 @@ async def get_service_stats():
         "venue_types": venue_types
     }
 
-# Add time slot endpoints
-@router.post("/time-slots", response_model=TimeSlot, status_code=status.HTTP_201_CREATED)
-async def create_time_slot(time_slot: TimeSlotCreate):
-    """Create a new time slot"""
-    time_slots_collection = get_time_slots_collection()
-    
-    time_slot_data = time_slot.dict()
-    time_slot_data["created_at"] = datetime.utcnow()
-    time_slot_data["updated_at"] = datetime.utcnow()
-    time_slot_data["current_bookings"] = 0
-    
-    result = time_slots_collection.insert_one(time_slot_data)
-    time_slot_data["id"] = str(result.inserted_id)
-    
-    return TimeSlot(**time_slot_data)
 
-@router.get("/time-slots", response_model=TimeSlotSearchResponse)
-async def search_time_slots(
-    venue_id: Optional[str] = Query(None, description="Filter by venue ID"),
-    date: Optional[str] = Query(None, description="Filter by date"),
-    start_date: Optional[str] = Query(None, description="Filter by start date"),
-    end_date: Optional[str] = Query(None, description="Filter by end date"),
-    status: Optional[TimeSlotStatus] = Query(None, description="Filter by status"),
-    min_capacity: Optional[int] = Query(None, description="Minimum capacity required"),
-    max_price: Optional[float] = Query(None, description="Maximum price"),
-    limit: int = Query(20, gt=0, le=100, description="Maximum number of results"),
-    offset: int = Query(0, ge=0, description="Pagination offset")
-):
-    """Search time slots with filtering"""
-    time_slots_collection = get_time_slots_collection()
-    
-    # Build filter
-    filter_query = {}
-    if venue_id:
-        filter_query["venue_id"] = venue_id
-    if date:
-        filter_query["date"] = date
-    if start_date and end_date:
-        filter_query["date"] = {"$gte": start_date, "$lte": end_date}
-    elif start_date:
-        filter_query["date"] = {"$gte": start_date}
-    elif end_date:
-        filter_query["date"] = {"$lte": end_date}
-    if status:
-        filter_query["status"] = status
-    if min_capacity:
-        filter_query["capacity"] = {"$gte": min_capacity}
-    if max_price:
-        filter_query["price"] = {"$lte": max_price}
-    
-    # Get total count
-    total = time_slots_collection.count_documents(filter_query)
-    
-    # Get paginated results
-    time_slots_cursor = time_slots_collection.find(filter_query).skip(offset).limit(limit)
-    
-    time_slots = []
-    for slot_doc in time_slots_cursor:
-        slot_doc["id"] = str(slot_doc["_id"])
-        time_slots.append(TimeSlot(**slot_doc))
-    
-    return TimeSlotSearchResponse(
-        time_slots=time_slots,
-        total_count=total,
-        has_more=offset + limit < total
-    )
-
-@router.get("/time-slots/{time_slot_id}", response_model=TimeSlot)
-async def get_time_slot(time_slot_id: str = Path(..., description="Time slot ID")):
-    """Get a specific time slot by ID"""
-    time_slots_collection = get_time_slots_collection()
-    
-    try:
-        slot_doc = time_slots_collection.find_one({"_id": ObjectId(time_slot_id)})
-        if not slot_doc:
-            raise HTTPException(status_code=404, detail="Time slot not found")
-        
-        slot_doc["id"] = str(slot_doc["_id"])
-        return TimeSlot(**slot_doc)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Invalid time slot ID")
-
-@router.put("/time-slots/{time_slot_id}", response_model=TimeSlot)
-async def update_time_slot(
-    time_slot_id: str = Path(..., description="Time slot ID"),
-    time_slot_update: TimeSlotUpdate = None
-):
-    """Update a time slot"""
-    time_slots_collection = get_time_slots_collection()
-    
-    try:
-        update_data = time_slot_update.dict(exclude_unset=True)
-        update_data["updated_at"] = datetime.utcnow()
-        
-        result = time_slots_collection.update_one(
-            {"_id": ObjectId(time_slot_id)},
-            {"$set": update_data}
-        )
-        
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Time slot not found")
-        
-        # Return updated time slot
-        slot_doc = time_slots_collection.find_one({"_id": ObjectId(time_slot_id)})
-        slot_doc["id"] = str(slot_doc["_id"])
-        return TimeSlot(**slot_doc)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Invalid time slot ID")
-
-@router.delete("/time-slots/{time_slot_id}", response_model=MessageResponse)
-async def delete_time_slot(time_slot_id: str = Path(..., description="Time slot ID")):
-    """Delete a time slot"""
-    time_slots_collection = get_time_slots_collection()
-    
-    try:
-        result = time_slots_collection.delete_one({"_id": ObjectId(time_slot_id)})
-        
-        if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Time slot not found")
-        
-        return MessageResponse(message="Time slot deleted successfully", success=True)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Invalid time slot ID")

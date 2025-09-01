@@ -16,9 +16,43 @@ class VenuesServiceClient:
         self.venues_service_url = venues_service_url or VENUES_SERVICE_URL
         self.client = httpx.AsyncClient(timeout=60.0)  # Longer timeout for plan generation
     
+    async def discover_venues(self, venue_request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Request venue discovery from Venues Service (NEW METHOD)
+        
+        Args:
+            venue_request: Venue discovery request with criteria
+            
+        Returns:
+            Venue discovery response with venues by type if successful, None otherwise
+        """
+        try:
+            response = await self.client.post(
+                f"{self.venues_service_url}/api/v1/venues/discover",
+                json=venue_request
+            )
+            
+            if response.status_code == 200:
+                venue_response = response.json()
+                logger.info(f"Venues discovered successfully for types: {venue_request.get('venue_types')}")
+                return venue_response
+            else:
+                logger.error(f"Failed to discover venues: {response.status_code} - {response.text}")
+                return None
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when discovering venues: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error when discovering venues: {e}")
+            return None
+
     async def generate_venue_plan(self, plan_request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Request venue plan generation from Venues Service
+        DEPRECATED: Request venue plan generation from Venues Service
+        
+        This method is deprecated. Use discover_venues() and handle plan generation
+        in the Planning Service.
         
         Args:
             plan_request: Complete plan request with user requirements

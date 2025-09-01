@@ -45,6 +45,25 @@ class Venue(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
 # User Preference Models (for integration with Planning Service)
+# Venue Discovery Models (NEW)
+class VenueDiscoveryRequest(BaseModel):
+    """Request model for venue discovery from Google Places API"""
+    venue_types: List[str] = Field(..., description="Types of venues to discover")
+    location: Location = Field(..., description="Location for venue search")
+    radius_km: float = Field(10.0, gt=0, le=100, description="Search radius in kilometers")
+    user_id: Optional[str] = Field(None, description="User identifier for personalization")
+    use_personalization: bool = Field(True, description="Whether to apply personalization")
+
+class VenueDiscoveryResponse(BaseModel):
+    """Response model for venue discovery"""
+    venues_by_type: Dict[str, List[Dict[str, Any]]] = Field(..., description="Venues grouped by type")
+    total_venues_found: int = Field(..., description="Total number of venues found")
+    venue_types_requested: List[str] = Field(..., description="Venue types that were requested")
+    location: Location = Field(..., description="Search location")
+    radius_km: float = Field(..., description="Search radius used")
+    personalization_applied: bool = Field(..., description="Whether personalization was applied")
+    discovered_at: str = Field(..., description="Timestamp when venues were discovered")
+
 class UserPreferences(BaseModel):
     user_id: str = Field(..., description="User identifier")
     preferred_venue_types: Optional[List[VenueType]] = Field(None, description="Preferred venue types")
@@ -132,56 +151,4 @@ class PaginatedResponse(BaseModel):
     size: int = Field(..., description="Page size")
     pages: int = Field(..., description="Total number of pages")
 
-# new schemas
 
-class TimeSlotStatus(str, Enum):
-    AVAILABLE = "available"
-    BOOKED = "booked"
-    RESERVED = "reserved"
-    UNAVAILABLE = "unavailable"
-
-class TimeSlot(BaseModel):
-    id: Optional[str] = Field(None, description="Unique identifier")
-    venue_id: str = Field(..., description="Reference to venue")
-    date: str = Field(..., description="Date in YYYY-MM-DD format")
-    start_time: str = Field(..., description="Start time in HH:MM format")
-    end_time: str = Field(..., description="End time in HH:MM format")
-    status: TimeSlotStatus = Field(TimeSlotStatus.AVAILABLE, description="Availability status")
-    capacity: Optional[int] = Field(None, description="Maximum capacity for this time slot")
-    current_bookings: Optional[int] = Field(0, description="Current number of bookings")
-    price: Optional[float] = Field(None, description="Price for this time slot")
-    description: Optional[str] = Field(None, description="Additional description")
-    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
-    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
-
-class TimeSlotCreate(BaseModel):
-    venue_id: str = Field(..., description="Reference to venue")
-    date: str = Field(..., description="Date in YYYY-MM-DD format")
-    start_time: str = Field(..., description="Start time in HH:MM format")
-    end_time: str = Field(..., description="End time in HH:MM format")
-    capacity: Optional[int] = Field(None, description="Maximum capacity")
-    price: Optional[float] = Field(None, description="Price for this time slot")
-    description: Optional[str] = Field(None, description="Additional description")
-
-class TimeSlotUpdate(BaseModel):
-    status: Optional[TimeSlotStatus] = Field(None, description="Availability status")
-    capacity: Optional[int] = Field(None, description="Maximum capacity")
-    current_bookings: Optional[int] = Field(None, description="Current number of bookings")
-    price: Optional[float] = Field(None, description="Price for this time slot")
-    description: Optional[str] = Field(None, description="Additional description")
-
-class TimeSlotSearchRequest(BaseModel):
-    venue_id: Optional[str] = Field(None, description="Filter by venue ID")
-    date: Optional[str] = Field(None, description="Filter by date")
-    start_date: Optional[str] = Field(None, description="Filter by start date")
-    end_date: Optional[str] = Field(None, description="Filter by end date")
-    status: Optional[TimeSlotStatus] = Field(None, description="Filter by status")
-    min_capacity: Optional[int] = Field(None, description="Minimum capacity required")
-    max_price: Optional[float] = Field(None, description="Maximum price")
-    limit: Optional[int] = Field(20, gt=0, le=100, description="Maximum number of results")
-    offset: Optional[int] = Field(0, ge=0, description="Pagination offset")
-
-class TimeSlotSearchResponse(BaseModel):
-    time_slots: List[TimeSlot] = Field(..., description="List of matching time slots")
-    total_count: int = Field(..., description="Total number of results")
-    has_more: bool = Field(..., description="Whether there are more results available")

@@ -18,11 +18,10 @@ db: Database = None
 
 # Collections
 venues_collection: Collection = None
-time_slots_collection: Collection = None
 
 def connect_to_mongodb():
     """Initialize MongoDB connection and collections"""
-    global client, db, venues_collection, time_slots_collection
+    global client, db, venues_collection
     
     try:
         client = MongoClient(MONGO_URI)
@@ -30,17 +29,12 @@ def connect_to_mongodb():
         
         # Initialize collections
         venues_collection = db.venues
-        time_slots_collection = db.time_slots
         
         # Create indexes for better performance
-        venues_collection.create_index([("name", 1)])
+        venues_collection.create_index([("venue_name", 1)])
         venues_collection.create_index([("venue_type", 1)])
-        venues_collection.create_index([("location.city", 1)])
-        venues_collection.create_index([("rating", -1)])
-        
-        time_slots_collection.create_index([("venue_id", 1)])
-        time_slots_collection.create_index([("date", 1)])
-        time_slots_collection.create_index([("start_time", 1)])
+        venues_collection.create_index([("google_place_id", 1)])
+        venues_collection.create_index([("created_at", -1)])
         
         logger.info("Successfully connected to MongoDB")
         
@@ -54,11 +48,7 @@ def get_venues_collection() -> Collection:
         connect_to_mongodb()
     return venues_collection
 
-def get_time_slots_collection() -> Collection:
-    """Get time_slots collection"""
-    if time_slots_collection is None:
-        connect_to_mongodb()
-    return time_slots_collection
+
 
 def close_connection():
     """Close MongoDB connection"""
