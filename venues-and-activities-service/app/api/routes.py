@@ -10,8 +10,7 @@ from typing import List, Dict
 
 from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
-    SearchRequest, SearchResponse, PersonalizedSearchRequest, PersonalizedSearchResponse,
-    MessageResponse, PaginatedResponse, UserPreferences,
+    MessageResponse, PaginatedResponse,
     VenueType,
     VenueDiscoveryRequest, VenueDiscoveryResponse
 )
