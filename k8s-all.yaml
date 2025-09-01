@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v4.0.3
+          image: dartoledano/planning-service:v4.3.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8001
@@ -268,7 +268,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v4.0.2
+          image: dartoledano/venues-service:v4.1.2
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -278,9 +278,9 @@ spec:
             - name: PLANNING_SERVICE_URL
               value: http://planning-service:8001
             - name: MONGO_URI
-              value: mongodb://mongo:27017/planeet
+              value: "mongodb://mongo:27017/planeet"
             - name: BOOKING_SERVICE_URL
-              value: "http://booking-service:8004/v1/generate-time-slots"
+              value: "http://booking-service:8004"  # ✅ Just the base URL
           resources:
             requests:
               memory: "256Mi"
@@ -322,7 +322,7 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v2.0.3
+          image: liorberlin/booking-service:v2.0.8
           imagePullPolicy: Always
           ports:
             - containerPort: 8004

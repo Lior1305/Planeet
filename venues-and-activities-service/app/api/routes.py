@@ -12,8 +12,7 @@ import os
 
 from app.models.schemas import (
     Venue, VenueCreate, VenueUpdate, VenueLink,
-    SearchRequest, SearchResponse, PersonalizedSearchRequest, PersonalizedSearchResponse,
-    MessageResponse, PaginatedResponse, UserPreferences,
+    MessageResponse, PaginatedResponse,
     VenueType,
     VenueDiscoveryRequest, VenueDiscoveryResponse
 )
@@ -29,6 +28,35 @@ from app.db import get_venues_collection
 
 
 from app.services.venue_discovery import venue_discovery
+
+# Add this function after the imports and before the other functions
+async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
+    """
+    Generate time slots for a venue by calling the booking service
+    """
+    try:
+        # Get the booking service URL from environment or use default
+        booking_service_url = os.getenv("BOOKING_SERVICE_URL", "http://localhost:30001")
+        
+        # Make HTTP request to booking service - use the correct endpoint
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{booking_service_url}/generate-time-slots",  # ✅ Remove /{venue_id} from URL
+                json={"venue_id": venue_id, "default_counter": 100},  # ✅ Send venue_id in request body
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Time slots generated for {venue_name}: {result.get('message', 'Success')}")
+                return True
+            else:
+                logger.error(f"❌ Failed to generate time slots for {venue_name}: {response.status_code} - {response.text}")
+                return False
+                
+    except Exception as e:
+        logger.error(f"❌ Error calling booking service for {venue_name}: {e}")
+        return False
 
 # Helper functions
 def get_venue_by_id(venue_id: str) -> Venue:

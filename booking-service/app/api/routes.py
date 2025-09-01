@@ -4,6 +4,9 @@ from typing import Dict, Any
 from app.models import BookingRequest, BookingResponse, BookingError, TimeSlotGenerationRequest, TimeSlotGenerationResponse
 from app.services.booking_service import BookingService
 from app.database import connect_to_mongo
+from bson import ObjectId
+from app.db.mongo import get_venues_collection  # ⚠️ adjust import path if different
+
 
 router = APIRouter()
 
@@ -101,6 +104,25 @@ async def generate_venue_time_slots(request: TimeSlotGenerationRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# @router.post("/generate-time-slots/{venue_id}")
+# async def generate_time_slots_for_venue(
+#     venue_id: str, 
+#     default_counter: int = 100
+# ):
+#     """
+#     Generate time slots for a specific venue by ID
+#     """
+#     try:
+#         request = TimeSlotGenerationRequest(
+#             venue_id=venue_id,
+#             default_counter=default_counter
+#         )
+#         response = await BookingService.generate_venue_time_slots(request)
+#         return response
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/generate-time-slots/{venue_id}")
 async def generate_time_slots_for_venue(
     venue_id: str, 
@@ -108,6 +130,7 @@ async def generate_time_slots_for_venue(
 ):
     """
     Generate time slots for a specific venue by ID
+    and update the venues collection with the generated slots
     """
     try:
         request = TimeSlotGenerationRequest(
@@ -115,6 +138,18 @@ async def generate_time_slots_for_venue(
             default_counter=default_counter
         )
         response = await BookingService.generate_venue_time_slots(request)
-        return response
+
+        # --- Save generated slots into venues collection ---
+        venues_collection = get_venues_collection()
+        venues_collection.update_one(
+            {"_id": ObjectId(venue_id)},
+            {"$set": {"time_slots": response.time_slots}}
+        )
+
+        return {
+            "message": "Time slots generated and saved successfully",
+            "venue_id": venue_id,
+            "time_slots": response.time_slots
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
