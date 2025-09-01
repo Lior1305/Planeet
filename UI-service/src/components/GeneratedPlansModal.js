@@ -14,6 +14,29 @@ const GeneratedPlansModal = ({ plans, onPlanSelection, onRegenerate, onClose }) 
     return `${duration} hour${duration !== 1 ? 's' : ''}`;
   };
 
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    try {
+      const [hours, minutes] = timeString.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes} ${ampm}`;
+    } catch {
+      return timeString;
+    }
+  };
+
+  const formatDurationMinutes = (minutes) => {
+    if (!minutes) return '';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+    return `${mins}m`;
+  };
+
   const getVenueTypeIcon = (venueType) => {
     const icons = {
       restaurant: '🍽️',
@@ -75,6 +98,44 @@ const GeneratedPlansModal = ({ plans, onPlanSelection, onRegenerate, onClose }) 
                         <h4 className="venue-name">{venue.name}</h4>
                         <p className="venue-type">{venue.venue_type}</p>
                         <p className="venue-address">{venue.address}</p>
+                        
+                        {/* Timing Information */}
+                        {(venue.start_time || venue.end_time) && (
+                          <div className="venue-timing">
+                            {venue.start_time && venue.end_time && (
+                              <span className="timing-info">
+                                🕒 {formatTime(venue.start_time)} - {formatTime(venue.end_time)}
+                              </span>
+                            )}
+                            {venue.duration_minutes && (
+                              <span className="duration-info">
+                                ⏱️ {formatDurationMinutes(venue.duration_minutes)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Travel Information */}
+                        {(venue.travel_distance_km || venue.travel_time_from_previous) && (
+                          <div className="venue-travel">
+                            {venue.travel_distance_km && venue.travel_distance_km > 0 && (
+                              <span className="distance-info">
+                                {venue.travel_distance_km < 2 ? '🚶‍♂️' : '🚗'} {venue.travel_distance_km}km
+                              </span>
+                            )}
+                            {venue.travel_time_from_previous && venue.travel_time_from_previous > 0 && (
+                              <span className="travel-time-info">
+                                {venue.travel_distance_km < 2 ? '🚶‍♂️' : '🚗'} {venue.travel_time_from_previous}min
+                              </span>
+                            )}
+                            {(!venue.travel_distance_km || venue.travel_distance_km === 0) && 
+                             (!venue.travel_time_from_previous || venue.travel_time_from_previous === 0) && (
+                              <span className="travel-time-info">
+                                🏁 Starting point
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {venue.url_link && (
                         <a 
