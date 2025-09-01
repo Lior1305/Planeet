@@ -95,7 +95,7 @@ class PlanningService {
         max_venues: formData.maxVenues,
         use_personalization: true,
         include_links: true,
-        date: new Date(`${formData.planDate}T${formData.planTime}`).toISOString(),
+        date: `${formData.planDate}T${formData.planTime}:00`,
         group_size: formData.groupSize,
         budget_range: formData.budgetRange,
         min_rating: formData.minRating,
