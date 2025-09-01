@@ -119,6 +119,35 @@ class OutingProfileService {
     };
   }
 
+  // Add ratings for venues in a past outing
+  async addOutingRatings(planId, userId, venueRatings) {
+    try {
+      const response = await fetch(`${this.baseUrl}/outing-history/${planId}/ratings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          venue_ratings: venueRatings
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Outing profile service error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Outing ratings added successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error adding outing ratings:', error);
+      throw error;
+    }
+  }
+
   // Admin/maintenance method to update all expired outings
   async updateExpiredOutings() {
     try {

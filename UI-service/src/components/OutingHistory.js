@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import outingProfileService from '../services/outingProfileService.js';
 import userService from '../services/userService.js';
+import RatingModal from './RatingModal.js';
 
 const OutingHistory = () => {
   const [outingHistory, setOutingHistory] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('future'); // 'future' or 'past'
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [selectedOuting, setSelectedOuting] = useState(null);
   
   const currentUser = userService.getCurrentUser();
 
@@ -128,6 +131,16 @@ const OutingHistory = () => {
         </div>
       </div>
     );
+  };
+
+  const handleRateOuting = (outing) => {
+    setSelectedOuting(outing);
+    setRatingModalOpen(true);
+  };
+
+  const handleRatingSubmitted = () => {
+    // Reload the outing history to show updated ratings
+    loadOutingHistory();
   };
 
   if (!currentUser) {
@@ -269,6 +282,15 @@ const OutingHistory = () => {
                   </div>
 
                   <div className="outing-actions">
+                    {!outing.venue_ratings && outing.selected_plan && outing.selected_plan.suggested_venues && (
+                      <button
+                        onClick={() => handleRateOuting(outing)}
+                        className="btn btn-primary btn-sm"
+                        title="Rate this outing"
+                      >
+                        ⭐ Rate
+                      </button>
+                    )}
                     <button
                       onClick={() => deleteOuting(outing.plan_id, currentUser.id)}
                       className="btn btn-outline btn-sm"
@@ -283,6 +305,14 @@ const OutingHistory = () => {
           )}
         </div>
       )}
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={ratingModalOpen}
+        onClose={() => setRatingModalOpen(false)}
+        outing={selectedOuting}
+        onRatingSubmitted={handleRatingSubmitted}
+      />
     </div>
   );
 };
