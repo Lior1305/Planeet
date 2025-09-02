@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 from .database import db
 from .models import Profile
 from datetime import datetime
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,11 @@ def get_outing_history():
         outing_history = profile.get("outing_history", [])
         logger.info(f"Retrieved {len(outing_history)} outings for user_id: {user_id}")
         
+        # Debug timezone info
+        logger.info(f"Server timezone: {os.environ.get('TZ', 'Not set')}")
+        logger.info(f"Current server time: {datetime.now()}")
+        logger.info(f"Current server time (naive): {datetime.now().replace(tzinfo=None)}")
+        
         # Separate into future and past outings
         today = datetime.now().date()
         
@@ -202,16 +208,30 @@ def get_outing_history():
                 outing_time = outing.get("outing_time", "00:00")
                 
                 # Create full datetime for comparison
+                # Convert outing time to UTC for comparison (assuming outing time is in Israel time UTC+3)
                 outing_datetime = datetime.combine(outing_date, datetime.strptime(outing_time, "%H:%M").time())
-                current_datetime = datetime.now()
+                # Subtract 3 hours to convert from Israel time to UTC
+                outing_datetime_utc = outing_datetime.replace(hour=(outing_datetime.hour - 3) % 24)
+                if outing_datetime.hour < 3:  # Day rolled back
+                    outing_datetime_utc = outing_datetime_utc.replace(day=outing_datetime.day - 1)
                 
-                if outing_datetime < current_datetime and outing.get("status") == "planned":
+                current_datetime = datetime.now().replace(tzinfo=None)
+                
+                # Debug logging
+                logger.info(f"Outing {outing.get('plan_id', 'unknown')}: Date={outing['outing_date']}, Time={outing_time}")
+                logger.info(f"Outing datetime (local): {outing_datetime}")
+                logger.info(f"Outing datetime (UTC): {outing_datetime_utc}")
+                logger.info(f"Current datetime (UTC): {current_datetime}")
+                logger.info(f"Outing < Current: {outing_datetime_utc < current_datetime}")
+                logger.info(f"Status: {outing.get('status', 'unknown')}")
+                
+                if outing_datetime_utc < current_datetime and outing.get("status") == "planned":
                     # Outing has passed but still marked as planned - mark for update
                     outings_to_update.append(outing["plan_id"])
                     # Mark as completed for this response
                     outing["status"] = "completed"
                 
-                if outing_date >= today:
+                if outing_datetime_utc > current_datetime:
                     future_outings.append(outing)
                 else:
                     past_outings.append(outing)
@@ -312,7 +332,7 @@ def update_expired_outings():
     """Update all expired outings across all users (admin/maintenance endpoint)"""
     try:
         profiles_collection = db.get_profiles_collection()
-        current_datetime = datetime.now()
+        current_datetime = datetime.now().replace(tzinfo=None)
         
         # Find all profiles with outing history
         profiles = profiles_collection.find({"outing_history": {"$exists": True, "$ne": []}})
@@ -404,7 +424,7 @@ def add_outing_ratings(plan_id):
             outing_date = datetime.fromisoformat(outing["outing_date"]).date()
             outing_time = outing.get("outing_time", "00:00")
             outing_datetime = datetime.combine(outing_date, datetime.strptime(outing_time, "%H:%M").time())
-            current_datetime = datetime.now()
+            current_datetime = datetime.now().replace(tzinfo=None)
             
             if outing_datetime >= current_datetime:
                 logger.warning(f"Cannot rate future outing: {plan_id}")

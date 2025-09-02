@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: outing-profile-service
-          image: nikaklimenchuk/outing-profile-service:v2.2
+          image: nikaklimenchuk/outing-profile-service:v2.5
           ports:
             - containerPort: 5000
           env:
@@ -121,7 +121,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.36
+          image: nikaklimenchuk/planeet-ui:react-v1.9.39
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -278,7 +278,9 @@ spec:
             - name: PLANNING_SERVICE_URL
               value: http://planning-service:8001
             - name: MONGO_URI
-              value: mongodb://mongo:27017/planeet
+              value: "mongodb://mongo:27017/planeet"
+            - name: BOOKING_SERVICE_URL
+              value: "http://booking-service-internal:8004"
           resources:
             requests:
               memory: "256Mi"
@@ -303,7 +305,6 @@ spec:
       nodePort: 30003
   type: NodePort
 
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -320,10 +321,10 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v1.4
+          image: liorberlin/booking-service:v2.1.1
           imagePullPolicy: Always
           ports:
-            - containerPort: 8004
+            - containerPort: 8004  # container listens on 8004
           env:
             - name: PORT
               value: "8004"
@@ -338,8 +339,23 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
-
 ---
+# Internal ClusterIP service (service-to-service inside k8s)
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service-internal
+spec:
+  selector:
+    app: booking-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8004        # internal service port
+      targetPort: 8004  # container port
+  type: ClusterIP
+---
+# External NodePort service (for Postman / localhost testing)
 apiVersion: v1
 kind: Service
 metadata:
@@ -350,7 +366,7 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 8004
-      targetPort: 8004
-      nodePort: 30006
+      port: 8004        # internal service port
+      targetPort: 8004  # container port
+      nodePort: 30006   # external port on localhost
   type: NodePort

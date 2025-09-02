@@ -13,6 +13,7 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
   const [cities, setCities] = useState([]);
   const [generatedPlans, setGeneratedPlans] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
 
   const totalSteps = 6;
   const currentUser = userService.getCurrentUser();
@@ -217,6 +218,7 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    setLoadingStep(0);
 
     try {
       // Final validation
@@ -226,8 +228,21 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
         return;
       }
 
+      // Show progress steps with minimal delays for better UX
+      setLoadingStep(1); // Analyzing preferences
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setLoadingStep(2); // Discovering venues
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      setLoadingStep(3); // Generating plans
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       // Create plan
       const result = await planningService.createPlan(formData, currentUser?.id);
+      
+      setLoadingStep(4); // Finalizing
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Store the generated plans and show them
       setGeneratedPlans(result);
@@ -238,6 +253,7 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
       setError('Failed to create plan. Please try again.');
     } finally {
       setIsLoading(false);
+      setLoadingStep(0);
     }
   };
 
@@ -266,6 +282,8 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
     setShowPlans(false);
     setGeneratedPlans(null);
     setError('');
+    // Trigger the loading process again
+    handleSubmit({ preventDefault: () => {} });
   };
 
   if (!isOpen) return null;
@@ -424,6 +442,10 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
               <div className={`form-step ${currentStep === 4 ? 'active' : ''}`}>
                 <div className="form-group">
                   <label className="form-label">Venue Types *</label>
+                  <div className="form-help" style={{ marginBottom: 
+                    '16px' }}>
+                    <span>🎯 Select the types of venues you'd like to include in your plan. The venues in your generated plan will be chosen from these selected categories.</span>
+                  </div>
                   <div className="checkbox-group">
                     {planningService.getVenueTypeOptions().map(option => (
                       <div key={option.value} className="checkbox-item">
@@ -622,6 +644,47 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
           </div>
         </div>
       </div>
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="loading-spinner"></div>
+            <div className="loading-title">Creating Your Perfect Plan</div>
+            <div className="loading-subtitle">This usually takes 10-15 seconds</div>
+            
+            <div className="loading-steps">
+              <div className={`loading-step ${loadingStep >= 1 ? 'completed' : loadingStep === 1 ? 'active' : ''}`}>
+                <div className={`loading-step-icon ${loadingStep > 1 ? 'completed' : loadingStep === 1 ? 'active' : 'pending'}`}>
+                  {loadingStep > 1 ? '✓' : loadingStep === 1 ? '⟳' : '1'}
+                </div>
+                Analyzing your preferences
+              </div>
+              
+              <div className={`loading-step ${loadingStep >= 2 ? 'completed' : loadingStep === 2 ? 'active' : ''}`}>
+                <div className={`loading-step-icon ${loadingStep > 2 ? 'completed' : loadingStep === 2 ? 'active' : 'pending'}`}>
+                  {loadingStep > 2 ? '✓' : loadingStep === 2 ? '⟳' : '2'}
+                </div>
+                Discovering venues in your area
+              </div>
+              
+              <div className={`loading-step ${loadingStep >= 3 ? 'completed' : loadingStep === 3 ? 'active' : ''}`}>
+                <div className={`loading-step-icon ${loadingStep > 3 ? 'completed' : loadingStep === 3 ? 'active' : 'pending'}`}>
+                  {loadingStep > 3 ? '✓' : loadingStep === 3 ? '⟳' : '3'}
+                </div>
+                Generating multiple plan options
+              </div>
+              
+              <div className={`loading-step ${loadingStep >= 4 ? 'completed' : loadingStep === 4 ? 'active' : ''}`}>
+                <div className={`loading-step-icon ${loadingStep > 4 ? 'completed' : loadingStep === 4 ? 'active' : 'pending'}`}>
+                  {loadingStep > 4 ? '✓' : loadingStep === 4 ? '⟳' : '4'}
+                </div>
+                Finalizing your plans
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Generated Plans Modal */}
       {showPlans && generatedPlans && (
