@@ -167,7 +167,7 @@ spec:
     spec:
       containers:
         - name: users-service
-          image: liorberlin/users-service:v3.4.5
+          image: liorberlin/users-service:v3.4.7
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v4.3.1
+          image: dartoledano/planning-service:v4.4.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8001
@@ -227,6 +227,8 @@ spec:
               value: http://venues-service:8000
             - name: OUTING_PROFILE_SERVICE_URL
               value: http://outing-profile-service:80
+            - name: USERS_SERVICE_URL
+              value: http://users-service:80
           resources:
             requests:
               memory: "128Mi"
