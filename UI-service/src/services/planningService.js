@@ -80,9 +80,9 @@ class PlanningService {
         group_size: formData.groupSize,
         budget_range: formData.budgetRange || '$$',
         min_rating: formData.minRating || 4.0, // Default minimum rating
-        amenities: formData.amenities ? formData.amenities.split(',').map(a => a.trim()) : null,
-        dietary_restrictions: formData.dietaryRestrictions ? formData.dietaryRestrictions.split(',').map(d => d.trim()) : null,
-        accessibility_needs: formData.accessibilityNeeds ? formData.accessibilityNeeds.split(',').map(a => a.trim()) : null
+        amenities: formData.amenities && formData.amenities.length > 0 ? formData.amenities : null,
+        dietary_restrictions: formData.dietaryRestrictions && formData.dietaryRestrictions.length > 0 ? formData.dietaryRestrictions : null,
+        accessibility_needs: formData.accessibilityNeeds && formData.accessibilityNeeds.length > 0 ? formData.accessibilityNeeds : null
       };
 
       console.log('Creating plan with request:', planRequest);
@@ -130,9 +130,9 @@ class PlanningService {
       radiusKm: 5, // Default search radius
       maxVenues: 1, // Default max venues
       minRating: 4.0, // Default minimum rating
-      amenities: '',
-      dietaryRestrictions: '',
-      accessibilityNeeds: ''
+      amenities: [], // Now an array for tag selection
+      dietaryRestrictions: [], // Now an array for tag selection
+      accessibilityNeeds: [] // Now an array for tag selection
     };
   }
 
