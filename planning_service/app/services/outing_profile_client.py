@@ -294,6 +294,39 @@ class OutingProfileClient:
             logger.error(f"Unexpected error when updating outing status: {e}")
             return False
     
+    async def update_outing_confirmation(self, plan_id: str, user_id: str, confirmed: bool = True) -> bool:
+        """
+        Update outing confirmation status in user's history
+        
+        Args:
+            plan_id: The plan identifier
+            user_id: The user identifier
+            confirmed: Whether the user confirmed the outing (True/False)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            response = await self.client.put(
+                f"{self.outing_profile_service_url}/outing-history/{plan_id}/confirm",
+                json={"user_id": user_id, "confirmed": confirmed}
+            )
+            
+            if response.status_code == 200:
+                status_text = "confirmed" if confirmed else "unconfirmed"
+                logger.info(f"Outing {status_text} for plan {plan_id}, user {user_id}")
+                return True
+            else:
+                logger.error(f"Failed to update outing confirmation: {response.status_code} - {response.text}")
+                return False
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when updating outing confirmation: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error when updating outing confirmation: {e}")
+            return False
+    
     async def close(self):
         """Close the HTTP client"""
         await self.client.aclose()
