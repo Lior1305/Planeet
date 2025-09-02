@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Tuple
 from datetime import datetime, timedelta
 import math
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,190 @@ class TimeCalculator:
     WALKING_SPEED_KMH = 4.5    # Average walking speed
     DRIVING_SPEED_KMH = 30     # Average city driving speed
     
+    # Venue type priorities for logical day/night flow
+    # Lower number = earlier in the day
+    VENUE_TYPE_PRIORITIES = {
+        "cafe": 1,             # Early day: breakfast, morning coffee
+        "museum": 2,           # Mid-day: sightseeing, culture
+        "park": 3,             # Afternoon: outdoor activities
+        "shopping_center": 4,  # Afternoon: shopping
+        "sports_facility": 5,  # Afternoon/early evening: activities
+        "spa": 6,              # Afternoon/early evening: relaxation
+        "restaurant": 7,       # Evening: dinner
+        "theater": 8,          # Evening: shows
+        "bar": 9,              # Night: drinks, nightlife
+        "other": 5             # Default middle priority
+    }
+    
+    # Typical opening hours for venue types (24-hour format)
+    TYPICAL_OPENING_HOURS = {
+        "cafe": {"open": 7, "close": 18},           # 7 AM - 6 PM
+        "museum": {"open": 10, "close": 17},        # 10 AM - 5 PM
+        "park": {"open": 6, "close": 22},           # 6 AM - 10 PM
+        "shopping_center": {"open": 10, "close": 21}, # 10 AM - 9 PM
+        "sports_facility": {"open": 6, "close": 22}, # 6 AM - 10 PM
+        "spa": {"open": 9, "close": 20},            # 9 AM - 8 PM
+        "restaurant": {"open": 11, "close": 23},    # 11 AM - 11 PM
+        "theater": {"open": 18, "close": 23},       # 6 PM - 11 PM
+        "bar": {"open": 17, "close": 2},            # 5 PM - 2 AM (next day)
+        "other": {"open": 9, "close": 21}           # Default 9 AM - 9 PM
+    }
+    
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+    
+    def parse_opening_hours(self, opening_hours: Dict[str, str]) -> Tuple[int, int]:
+        """
+        Parse opening hours from venue data
+        
+        Args:
+            opening_hours: Dict with 'open_at' and 'close_at' times (e.g., "09:00", "21:30")
+            
+        Returns:
+            Tuple of (open_hour, close_hour) in 24-hour format
+        """
+        try:
+            open_str = opening_hours.get("open_at", "")
+            close_str = opening_hours.get("close_at", "")
+            
+            if not open_str or not close_str:
+                return None, None
+            
+            # Parse time strings like "09:00" or "21:30"
+            open_match = re.match(r"(\d{1,2}):(\d{2})", open_str)
+            close_match = re.match(r"(\d{1,2}):(\d{2})", close_str)
+            
+            if not open_match or not close_match:
+                return None, None
+            
+            open_hour = int(open_match.group(1)) + (int(open_match.group(2)) / 60.0)
+            close_hour = int(close_match.group(1)) + (int(close_match.group(2)) / 60.0)
+            
+            return open_hour, close_hour
+            
+        except (ValueError, AttributeError) as e:
+            self.logger.warning(f"Failed to parse opening hours {opening_hours}: {e}")
+            return None, None
+    
+    def is_venue_open_at_time(self, venue: Dict[str, Any], check_time: datetime) -> bool:
+        """
+        Check if a venue is open at a specific time
+        
+        Args:
+            venue: Venue dictionary with opening_hours
+            check_time: Time to check
+            
+        Returns:
+            True if venue is open, False if closed or unknown
+        """
+        venue_type = venue.get("venue_type", "other").lower()
+        opening_hours = venue.get("opening_hours", {})
+        
+        # Try to parse actual opening hours from venue data
+        open_hour, close_hour = self.parse_opening_hours(opening_hours)
+        
+        # If no opening hours available, use typical hours for venue type
+        if open_hour is None or close_hour is None:
+            typical_hours = self.TYPICAL_OPENING_HOURS.get(venue_type, self.TYPICAL_OPENING_HOURS["other"])
+            open_hour = typical_hours["open"]
+            close_hour = typical_hours["close"]
+        
+        # Convert check time to hour (with minutes as fraction)
+        check_hour = check_time.hour + (check_time.minute / 60.0)
+        
+        # Handle venues that close after midnight (like bars)
+        if close_hour < open_hour:  # e.g., open at 17, close at 2 (next day)
+            # Venue is open if time is after opening OR before closing (next day)
+            return check_hour >= open_hour or check_hour <= close_hour
+        else:
+            # Normal hours: venue is open between open_hour and close_hour
+            return open_hour <= check_hour <= close_hour
+    
+    def get_venue_priority_score(self, venue: Dict[str, Any], planned_start_time: datetime) -> float:
+        """
+        Calculate a priority score for venue ordering considering both:
+        1. Logical day/night flow (venue type priority)
+        2. How well the venue timing fits the planned start time
+        
+        Lower score = higher priority (should come earlier)
+        """
+        venue_type = venue.get("venue_type", "other").lower()
+        
+        # Base priority from venue type (1-9, lower is earlier)
+        type_priority = self.VENUE_TYPE_PRIORITIES.get(venue_type, 5)
+        
+        # Time appropriateness score (0-2, lower is better match)
+        time_score = self.calculate_time_appropriateness(venue_type, planned_start_time)
+        
+        # Combine scores (type priority is more important)
+        total_score = type_priority + (time_score * 0.3)
+        
+        return total_score
+    
+    def calculate_time_appropriateness(self, venue_type: str, planned_time: datetime) -> float:
+        """
+        Calculate how appropriate a venue type is for a specific time
+        
+        Returns:
+            0.0 = perfect time
+            1.0 = acceptable time
+            2.0 = inappropriate time
+        """
+        hour = planned_time.hour
+        
+        # Define ideal time ranges for each venue type
+        time_appropriateness = {
+            "cafe": {
+                "perfect": (7, 11),    # Morning coffee
+                "good": (11, 16),      # Afternoon coffee
+                "poor": (16, 24)       # Evening/night (inappropriate)
+            },
+            "museum": {
+                "perfect": (10, 15),   # Ideal museum hours
+                "good": (9, 17),       # Acceptable hours
+                "poor": (17, 24)       # Evening (closed)
+            },
+            "park": {
+                "perfect": (8, 18),    # Daylight hours
+                "good": (6, 20),       # Extended daylight
+                "poor": (20, 6)        # Night time
+            },
+            "restaurant": {
+                "perfect": (12, 14),   # Lunch
+                "good": (18, 22),      # Dinner
+                "poor": (3, 11)        # Very early morning
+            },
+            "bar": {
+                "perfect": (19, 24),   # Evening/night
+                "good": (17, 2),       # Happy hour to late night
+                "poor": (6, 17)        # Daytime
+            }
+        }
+        
+        # Get appropriateness for this venue type
+        appropriateness = time_appropriateness.get(venue_type, {
+            "perfect": (9, 21),
+            "good": (8, 22),
+            "poor": (22, 8)
+        })
+        
+        # Check which range the hour falls into
+        perfect_start, perfect_end = appropriateness["perfect"]
+        good_start, good_end = appropriateness["good"]
+        
+        # Handle time ranges that cross midnight
+        def in_range(hour, start, end):
+            if start <= end:
+                return start <= hour <= end
+            else:  # crosses midnight
+                return hour >= start or hour <= end
+        
+        if in_range(hour, perfect_start, perfect_end):
+            return 0.0  # Perfect time
+        elif in_range(hour, good_start, good_end):
+            return 1.0  # Good time
+        else:
+            return 2.0  # Poor time
     
     def round_time_to_15_minutes(self, dt: datetime) -> datetime:
         """
@@ -181,6 +364,17 @@ class TimeCalculator:
             # Recalculate actual duration based on rounded times
             actual_duration_minutes = int((end_datetime - current_time).total_seconds() / 60)
             
+            # Check if venue is open during the planned time
+            venue_open_at_start = self.is_venue_open_at_time(venue, current_time)
+            venue_open_at_end = self.is_venue_open_at_time(venue, end_datetime)
+            
+            if not venue_open_at_start or not venue_open_at_end:
+                venue_name = venue.get("name", "Unknown")
+                venue_type = venue.get("venue_type", "unknown")
+                self.logger.warning(
+                    f"⚠️ {venue_name} ({venue_type}) may be closed during planned time {start_time}-{end_time}"
+                )
+            
             # Update venue with timing information
             venue_copy.update({
                 "start_time": start_time,
@@ -203,44 +397,125 @@ class TimeCalculator:
         
         return timed_venues
     
-    def optimize_venue_order(self, venues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def optimize_venue_order(self, venues: List[Dict[str, Any]], start_time: datetime = None) -> List[Dict[str, Any]]:
         """
-        Optimize the order of venues to minimize total travel time
-        Simple nearest-neighbor approach
+        Optimize venue order considering:
+        1. Logical day/night flow (cafes → restaurants → bars)
+        2. Opening hours validation
+        3. Travel time optimization
+        
+        Args:
+            venues: List of venue dictionaries
+            start_time: When the plan starts (for time appropriateness calculation)
+            
+        Returns:
+            Optimized venue list
+        """
+        if len(venues) <= 1:
+            return venues
+        
+        # Use current time if no start time provided
+        if start_time is None:
+            start_time = datetime.now().replace(hour=19, minute=0, second=0, microsecond=0)  # Default 7 PM
+        
+        self.logger.info(f"Optimizing venue order for {len(venues)} venues starting at {start_time.strftime('%H:%M')}")
+        
+        # Step 1: Sort venues by logical day/night flow and time appropriateness
+        venues_with_scores = []
+        for venue in venues:
+            priority_score = self.get_venue_priority_score(venue, start_time)
+            venues_with_scores.append((venue, priority_score))
+        
+        # Sort by priority score (lower = earlier in day)
+        venues_with_scores.sort(key=lambda x: x[1])
+        logical_order = [venue for venue, score in venues_with_scores]
+        
+        # Log the logical ordering
+        for i, (venue, score) in enumerate(venues_with_scores):
+            venue_type = venue.get("venue_type", "unknown")
+            venue_name = venue.get("name", "Unknown")
+            self.logger.info(f"  {i+1}. {venue_name} ({venue_type}) - Priority Score: {score:.2f}")
+        
+        # Step 2: Apply travel time optimization while preserving logical flow
+        # Only swap adjacent venues if it significantly reduces travel time
+        optimized = self.apply_travel_optimization(logical_order)
+        
+        self.logger.info(f"✅ Optimized venue order: {' → '.join([v.get('venue_type', 'unknown') for v in optimized])}")
+        return optimized
+    
+    def apply_travel_optimization(self, venues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Apply travel time optimization while preserving logical venue type flow
+        Only swap adjacent venues if travel time savings are significant
         """
         if len(venues) <= 2:
             return venues
         
-        optimized = [venues[0]]  # Start with first venue
-        remaining = venues[1:].copy()
+        optimized = venues.copy()
+        improved = True
         
-        while remaining:
-            current_venue = optimized[-1]
-            current_lat = current_venue["location"]["latitude"]
-            current_lon = current_venue["location"]["longitude"]
+        # Multiple passes to find optimal adjacent swaps
+        while improved:
+            improved = False
             
-            # Find nearest remaining venue
-            min_distance = float('inf')
-            nearest_venue = None
-            nearest_index = -1
-            
-            for i, venue in enumerate(remaining):
-                venue_lat = venue["location"]["latitude"]
-                venue_lon = venue["location"]["longitude"]
+            for i in range(len(optimized) - 1):
+                current_order = optimized[i:i+2]
+                swapped_order = [optimized[i+1], optimized[i]]
                 
-                distance = self.calculate_distance(current_lat, current_lon, venue_lat, venue_lon)
+                # Calculate travel time for both orders
+                current_travel = self.calculate_total_travel_time(current_order)
+                swapped_travel = self.calculate_total_travel_time(swapped_order)
                 
-                if distance < min_distance:
-                    min_distance = distance
-                    nearest_venue = venue
-                    nearest_index = i
-            
-            if nearest_venue:
-                optimized.append(nearest_venue)
-                remaining.pop(nearest_index)
+                # Only swap if travel time improvement is significant (>0.5 km saved)
+                travel_savings_km = current_travel - swapped_travel
+                
+                # Also check if swapping doesn't violate logical flow too much
+                type_conflict_penalty = self.calculate_type_conflict_penalty(
+                    optimized[i], optimized[i+1]
+                )
+                
+                # Swap if travel savings outweigh type conflict penalty
+                if travel_savings_km > 0.5 and travel_savings_km > type_conflict_penalty:
+                    optimized[i], optimized[i+1] = optimized[i+1], optimized[i]
+                    improved = True
+                    self.logger.info(f"🔄 Swapped {optimized[i+1].get('venue_type')} and {optimized[i].get('venue_type')} to save {travel_savings_km:.1f}km travel")
         
-        self.logger.info(f"Optimized venue order to minimize travel time")
         return optimized
+    
+    def calculate_total_travel_time(self, venues: List[Dict[str, Any]]) -> float:
+        """Calculate total travel distance for a sequence of venues"""
+        if len(venues) <= 1:
+            return 0.0
+        
+        total_distance = 0.0
+        for i in range(len(venues) - 1):
+            lat1 = venues[i]["location"]["latitude"]
+            lon1 = venues[i]["location"]["longitude"]
+            lat2 = venues[i+1]["location"]["latitude"]
+            lon2 = venues[i+1]["location"]["longitude"]
+            
+            distance = self.calculate_distance(lat1, lon1, lat2, lon2)
+            total_distance += distance
+        
+        return total_distance
+    
+    def calculate_type_conflict_penalty(self, venue1: Dict[str, Any], venue2: Dict[str, Any]) -> float:
+        """
+        Calculate penalty for swapping two venues based on type priority conflict
+        Higher penalty = less desirable to swap
+        """
+        type1 = venue1.get("venue_type", "other").lower()
+        type2 = venue2.get("venue_type", "other").lower()
+        
+        priority1 = self.VENUE_TYPE_PRIORITIES.get(type1, 5)
+        priority2 = self.VENUE_TYPE_PRIORITIES.get(type2, 5)
+        
+        # If swapping would put a later-day venue before an earlier-day venue,
+        # apply penalty proportional to the priority difference
+        if priority2 < priority1:  # venue2 should come before venue1
+            return abs(priority1 - priority2) * 0.3  # Penalty in "km equivalent"
+        
+        return 0.0  # No penalty if order is logical
     
     def get_plan_summary(self, timed_venues: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
