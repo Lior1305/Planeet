@@ -557,42 +557,69 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
               {/* Step 6: Review */}
               <div className={`form-step ${currentStep === 6 ? 'active' : ''}`}>
                 <div className="form-group">
-                  <label htmlFor="dietaryRestrictions" className="form-label">Dietary Restrictions</label>
-                  <input
-                    type="text"
-                    id="dietaryRestrictions"
-                    name="dietaryRestrictions"
-                    className="form-input"
-                    value={formData.dietaryRestrictions}
-                    onChange={handleInputChange}
-                    placeholder="e.g., vegetarian, gluten-free, kosher"
-                  />
+                  <label className="form-label">Dietary Restrictions</label>
+                  <div className="tag-selection">
+                    {['vegetarian', 'vegan', 'gluten-free', 'kosher', 'halal', 'dairy-free', 'nut-free'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`tag-button ${formData.dietaryRestrictions.includes(tag) ? 'selected' : ''}`}
+                        onClick={() => {
+                          const current = formData.dietaryRestrictions;
+                          const updated = current.includes(tag) 
+                            ? current.filter(t => t !== tag)
+                            : [...current, tag];
+                          setFormData(prev => ({ ...prev, dietaryRestrictions: updated }));
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="accessibilityNeeds" className="form-label">Accessibility Needs</label>
-                  <input
-                    type="text"
-                    id="accessibilityNeeds"
-                    name="accessibilityNeeds"
-                    className="form-input"
-                    value={formData.accessibilityNeeds}
-                    onChange={handleInputChange}
-                    placeholder="e.g., wheelchair accessible, elevator"
-                  />
+                  <label className="form-label">Accessibility Needs</label>
+                  <div className="tag-selection">
+                    {['wheelchair_accessible', 'elevator', 'ramp', 'accessible_bathroom', 'braille_signs', 'audio_description'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`tag-button ${formData.accessibilityNeeds.includes(tag) ? 'selected' : ''}`}
+                        onClick={() => {
+                          const current = formData.accessibilityNeeds;
+                          const updated = current.includes(tag) 
+                            ? current.filter(t => t !== tag)
+                            : [...current, tag];
+                          setFormData(prev => ({ ...prev, accessibilityNeeds: updated }));
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="amenities" className="form-label">Preferred Amenities</label>
-                  <input
-                    type="text"
-                    id="amenities"
-                    name="amenities"
-                    className="form-input"
-                    value={formData.amenities}
-                    onChange={handleInputChange}
-                    placeholder="e.g., parking, wifi, outdoor seating"
-                  />
+                  <label className="form-label">Preferred Amenities</label>
+                  <div className="tag-selection">
+                    {['parking', 'wifi', 'outdoor_seating', 'delivery', 'takeout', 'reservations', 'live_music', 'family_friendly', 'romantic', 'casual', 'upscale'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`tag-button ${formData.amenities.includes(tag) ? 'selected' : ''}`}
+                        onClick={() => {
+                          const current = formData.amenities;
+                          const updated = current.includes(tag) 
+                            ? current.filter(t => t !== tag)
+                            : [...current, tag];
+                          setFormData(prev => ({ ...prev, amenities: updated }));
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div style={{ 

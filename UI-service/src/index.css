@@ -1879,3 +1879,53 @@ code {
     flex: 1;
   }
 }
+
+/* Tag selection styles */
+.tag-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag-button {
+  padding: 8px 16px;
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  background: var(--background);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  outline: none;
+}
+
+.tag-button:hover {
+  border-color: var(--primary);
+  background: var(--primary-alpha);
+}
+
+.tag-button.selected {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.tag-button.selected:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+/* Responsive tag layout */
+@media (max-width: 768px) {
+  .tag-selection {
+    gap: 6px;
+  }
+  
+  .tag-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+}
