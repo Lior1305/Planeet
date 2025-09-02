@@ -7,6 +7,7 @@ import logging
 from app.models.plan_request import PlanRequest, PlanResponse, PlanConfirmationRequest, ConfirmedPlan, Participant
 from app.services.venues_service_client import venues_service_client
 from app.services.outing_profile_client import outing_profile_client
+from app.services.user_service_client import user_service_client
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -119,14 +120,18 @@ async def create_plan(plan_request: PlanRequest):
         return plan_response
             
     except Exception as e:
-        logger.error(f"Error creating plan: {e}")
+        import traceback
+        error_msg = str(e) if str(e) else "Unknown error"
+        trace_msg = traceback.format_exc()
+        logger.error(f"Error creating plan: {error_msg}")
+        logger.error(f"Full traceback: {trace_msg}")
         # Store failed plan
         plan_store[plan_id] = {
             "plan_id": plan_id,
             "status": "failed",
-            "message": f"Plan creation failed: {str(e)}"
+            "message": f"Plan creation failed: {error_msg}"
         }
-        raise HTTPException(status_code=500, detail=f"Plan creation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Plan creation failed: {error_msg}")
 
 @router.get("/plans/{plan_id}", response_model=Dict[str, Any])
 async def get_plan(plan_id: str):
@@ -257,7 +262,7 @@ async def confirm_plan(plan_id: str, confirmation_request: PlanConfirmationReque
         logger.info(f"Confirming plan {plan_id}, selected index: {confirmation_request.selected_plan_index}")
         
         # Get creator's information from users service
-        creator_info = await get_user_info_by_id(creator_user_id)
+        creator_info = await user_service_client.get_user_by_id(creator_user_id)
         
         # Create participants list starting with the creator
         participants = [
@@ -273,7 +278,7 @@ async def confirm_plan(plan_id: str, confirmation_request: PlanConfirmationReque
         # Add invited participants
         for email in confirmation_request.participant_emails:
             # Try to find user by email
-            user_info = await get_user_info_by_email(email)
+            user_info = await user_service_client.get_user_by_email(email)
             
             if user_info:
                 participants.append(
@@ -314,17 +319,33 @@ async def confirm_plan(plan_id: str, confirmation_request: PlanConfirmationReque
         # Add to each participant's outing history
         for participant in participants:
             try:
+                # Handle date conversion properly
+                plan_date = original_request["date"]
+                if isinstance(plan_date, str):
+                    plan_datetime = datetime.fromisoformat(plan_date)
+                else:
+                    plan_datetime = plan_date
+                
                 outing_data = {
                     "user_id": participant.user_id,
                     "plan_id": plan_id,
                     "plan_name": f"Group Outing - {selected_plan.get('name', 'Unknown')}",
-                    "outing_date": original_request["date"],
-                    "outing_time": datetime.fromisoformat(original_request["date"]).strftime("%H:%M"),
+                    "outing_date": plan_datetime.isoformat(),
+                    "outing_time": plan_datetime.strftime("%H:%M"),
                     "group_size": len(participants),
                     "city": original_request.get("location", {}).get("city", "Unknown"),
                     "venue_types": [vt for vt in original_request["venue_types"]],
                     "selected_plan": selected_plan,
-                    "participants": [p.dict() for p in participants],
+                    "participants": [
+                        {
+                            "user_id": p.user_id,
+                            "email": p.email,
+                            "name": p.name,
+                            "status": p.status,
+                            "invited_at": p.invited_at.isoformat() if hasattr(p, 'invited_at') and p.invited_at else None,
+                            "confirmed_at": p.confirmed_at.isoformat() if hasattr(p, 'confirmed_at') and p.confirmed_at else None
+                        } for p in participants
+                    ],
                     "creator_user_id": creator_user_id,
                     "is_group_outing": True
                 }
@@ -396,8 +417,53 @@ async def respond_to_plan_invitation(
         # Update stored plan
         confirmed_plans_store[plan_id] = confirmed_plan
         
-        # Update outing history status if declined
-        if response_status == "declined":
+        # Handle outing history based on response
+        if response_status == "confirmed":
+            # Add outing to user's history when they confirm
+            try:
+                # Get original plan request to build outing data
+                original_request = plan_requests_store.get(plan_id, {})
+                selected_plan = confirmed_plan.get("plan_details", {})
+                
+                # Handle date conversion properly
+                plan_date = original_request.get("date")
+                if isinstance(plan_date, str):
+                    plan_datetime = datetime.fromisoformat(plan_date)
+                else:
+                    plan_datetime = plan_date
+                
+                outing_data = {
+                    "user_id": user_id,
+                    "plan_id": plan_id,
+                    "plan_name": f"Group Outing - {selected_plan.get('name', 'Unknown')}",
+                    "outing_date": plan_datetime.isoformat() if plan_datetime else datetime.utcnow().isoformat(),
+                    "outing_time": plan_datetime.strftime("%H:%M") if plan_datetime else "19:00",
+                    "group_size": len(participants),
+                    "city": original_request.get("location", {}).get("city", "Unknown"),
+                    "venue_types": original_request.get("venue_types", []),
+                    "selected_plan": selected_plan,
+                    "participants": [
+                        {
+                            "user_id": p.get("user_id"),
+                            "email": p.get("email"),
+                            "name": p.get("name"),
+                            "status": p.get("status"),
+                            "invited_at": p.get("invited_at"),
+                            "confirmed_at": p.get("confirmed_at")
+                        } for p in participants
+                    ],
+                    "creator_user_id": confirmed_plan.get("creator_user_id"),
+                    "is_group_outing": True
+                }
+                
+                await outing_profile_client.add_outing_history(outing_data)
+                logger.info(f"Added outing to history for user {user_id} who confirmed invitation")
+                
+            except Exception as e:
+                logger.error(f"Failed to add outing to history for confirming user {user_id}: {e}")
+                
+        elif response_status == "declined":
+            # Update outing status for declined invitation
             try:
                 await outing_profile_client.update_outing_status(plan_id, user_id, "cancelled")
             except Exception as e:
@@ -418,44 +484,22 @@ async def respond_to_plan_invitation(
         logger.error(f"Error responding to plan invitation: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to respond to invitation: {str(e)}")
 
-async def get_user_info_by_email(email: str) -> Dict[str, Any]:
-    """Get user information by email from users service"""
-    try:
-        # This would call the users service to find user by email
-        # For now, return a placeholder - you'll need to implement this in the users service
-        import aiohttp
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"http://users-service:8080/users/by-email?email={email}") as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    return None
-    except Exception as e:
-        logger.error(f"Failed to get user info by email {email}: {e}")
-        return None
 
-async def get_user_info_by_id(user_id: str) -> Dict[str, Any]:
-    """Get user information by ID from users service"""
-    try:
-        import aiohttp
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"http://users-service:8080/users/{user_id}") as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    return {"username": "Unknown", "email": "unknown@email.com"}
-    except Exception as e:
-        logger.error(f"Failed to get user info by id {user_id}: {e}")
-        return {"username": "Unknown", "email": "unknown@email.com"}
 
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
+    # Check dependency services
+    user_service_healthy = await user_service_client.health_check()
+    
     return {
         "status": "healthy",
         "service": "Planning Service",
         "timestamp": datetime.utcnow().isoformat(),
         "active_plans": len(plan_store),
         "pending_requests": len(plan_requests_store),
-        "confirmed_plans": len(confirmed_plans_store)
+        "confirmed_plans": len(confirmed_plans_store),
+        "dependencies": {
+            "users_service": "healthy" if user_service_healthy else "unhealthy"
+        }
     }

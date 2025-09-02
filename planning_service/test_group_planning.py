@@ -26,6 +26,7 @@ async def test_group_planning_flow():
         tomorrow = datetime.now() + timedelta(days=1)
         plan_request = {
             "user_id": "test-user-1",
+            "plan_id": "test-group-plan-001",
             "venue_types": ["restaurant", "bar"],
             "location": {
                 "latitude": 40.7128,

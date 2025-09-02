@@ -232,7 +232,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v1.0.4
+          image: dartoledano/planning-service:v4.3.9
           ports:
             - containerPort: 8001
           env:

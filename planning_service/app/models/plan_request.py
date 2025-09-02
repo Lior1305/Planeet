@@ -23,7 +23,7 @@ class Location(BaseModel):
     latitude: float = Field(..., description="Latitude coordinate")
     longitude: float = Field(..., description="Longitude coordinate")
     address: Optional[str] = Field(None, description="Human-readable address")
-    city: Optional[str] = Field(None, description="City name")
+    city: str = Field(..., description="City name")
     country: Optional[str] = Field(None, description="Country name")
 
 class PlanRequest(BaseModel):
