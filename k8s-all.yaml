@@ -167,7 +167,7 @@ spec:
     spec:
       containers:
         - name: users-service
-          image: liorberlin/users-service:v3.4.5
+          image: liorberlin/users-service:v3.4.6
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

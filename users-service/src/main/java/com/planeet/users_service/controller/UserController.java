@@ -45,6 +45,12 @@ public class UserController {
                 .map(ResponseEntity::ok)
                 .onErrorResume(e -> {
                     log.error("Error creating user: {}", e.getMessage(), e);
+                    
+                    // Check if it's an email uniqueness error
+                    if (e.getMessage() != null && e.getMessage().contains("already exists")) {
+                        return Mono.just(ResponseEntity.status(409).body(null)); // 409 Conflict
+                    }
+                    
                     return Mono.just(ResponseEntity.status(500).build());
                 });
     }
@@ -53,19 +59,45 @@ public class UserController {
     public Mono<ResponseEntity<User>> updateUser(@PathVariable String id, @RequestBody User updatedUser) {
         return userService.updateUser(id, updatedUser)
                 .map(ResponseEntity::ok)
-                .defaultIfEmpty(ResponseEntity.notFound().build());
+                .defaultIfEmpty(ResponseEntity.notFound().build())
+                .onErrorResume(e -> {
+                    log.error("Error updating user: {}", e.getMessage(), e);
+                    
+                    // Check if it's an email uniqueness error
+                    if (e.getMessage() != null && e.getMessage().contains("already exists")) {
+                        return Mono.just(ResponseEntity.status(409).body(null)); // 409 Conflict
+                    }
+                    
+                    return Mono.just(ResponseEntity.status(500).build());
+                });
     }
 
     @PatchMapping("/{id}")
     public Mono<ResponseEntity<User>> patchUser(@PathVariable String id, @RequestBody Map<String, Object> updates) {
         return userService.patchUser(id, updates)
                 .map(ResponseEntity::ok)
-                .defaultIfEmpty(ResponseEntity.notFound().build());
+                .defaultIfEmpty(ResponseEntity.notFound().build())
+                .onErrorResume(e -> {
+                    log.error("Error patching user: {}", e.getMessage(), e);
+                    
+                    // Check if it's an email uniqueness error
+                    if (e.getMessage() != null && e.getMessage().contains("already exists")) {
+                        return Mono.just(ResponseEntity.status(409).body(null)); // 409 Conflict
+                    }
+                    
+                    return Mono.just(ResponseEntity.status(500).build());
+                });
     }
 
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Void>> deleteUser(@PathVariable String id) {
         return userService.deleteUser(id)
                 .thenReturn(ResponseEntity.noContent().build());
+    }
+    
+    @GetMapping("/check-email")
+    public Mono<ResponseEntity<Boolean>> isEmailAvailable(@RequestParam String email) {
+        return userService.isEmailAvailable(email)
+                .map(ResponseEntity::ok);
     }
 }
