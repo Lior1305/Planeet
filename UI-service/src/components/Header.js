@@ -6,6 +6,27 @@ import EditUserModal from './EditUserModal.js';
 const Header = () => {
   const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [hasNotifications, setHasNotifications] = useState(false); // For future use
+  
+  // Example of how to use notifications in the future:
+  // useEffect(() => {
+  //   // Check for notifications from backend
+  //   const checkNotifications = async () => {
+  //     try {
+  //       const response = await fetch('/api/notifications');
+  //       const notifications = await response.json();
+  //       setHasNotifications(notifications.length > 0);
+  //     } catch (error) {
+  //       console.error('Error checking notifications:', error);
+  //     }
+  //   };
+  //   
+  //   checkNotifications();
+  //   // Set up interval to check for new notifications
+  //   const interval = setInterval(checkNotifications, 30000); // Check every 30 seconds
+  //   
+  //   return () => clearInterval(interval);
+  // }, []);
   const currentUser = userService.getCurrentUser();
 
   const handleLogout = () => {
@@ -45,6 +66,13 @@ const Header = () => {
           <div className="user-menu">
             {currentUser ? (
               <>
+                <div className="notification-bell">
+                  <button className="bell-button" onClick={() => console.log('Notifications clicked')}>
+                    <span className="bell-icon">🔔</span>
+                    {/* Notification indicator - will show when there are notifications */}
+                    {hasNotifications && <span className="notification-indicator"></span>}
+                  </button>
+                </div>
                 <div className="user-info" onClick={() => setIsEditModalOpen(true)} style={{ cursor: 'pointer' }}>
                   <div className="user-avatar">
                     {currentUser.username.charAt(0).toUpperCase()}
