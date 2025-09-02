@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v4.4.0
+          image: dartoledano/planning-service:v4.4.1
           imagePullPolicy: Always
           ports:
             - containerPort: 8001

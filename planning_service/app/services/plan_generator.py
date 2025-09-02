@@ -273,8 +273,8 @@ class PlanGenerator:
             logger.warning(f"Plan {plan_id} contains duplicate venue categories: {venue_categories}")
             # Log but don't fail - this shouldn't happen with our new logic but good to catch
         
-        # Optimize venue order to minimize travel time
-        optimized_venues = time_calculator.optimize_venue_order(venues)
+        # Optimize venue order considering logical flow, opening hours, and travel time
+        optimized_venues = time_calculator.optimize_venue_order(venues, plan_request.date)
         
         # Calculate timing for all venues
         timed_venues = time_calculator.calculate_plan_timing(
