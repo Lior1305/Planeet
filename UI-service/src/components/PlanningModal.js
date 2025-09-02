@@ -14,21 +14,33 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
   const [generatedPlans, setGeneratedPlans] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [countries] = useState(planningService.getAllCountries());
+  const [selectedCountry, setSelectedCountry] = useState('');
 
   const totalSteps = 6;
   const currentUser = userService.getCurrentUser();
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(planningService.getDefaultFormData());
+      const defaultData = planningService.getDefaultFormData();
+      setFormData(defaultData);
+      setSelectedCountry(defaultData.country);
       setCurrentStep(1);
       setError('');
       setGeneratedPlans(null);
       setShowPlans(false);
-      // Load cities immediately (no async needed)
-      setCities(planningService.getAllCities());
     }
   }, [isOpen]);
+
+  // Load cities when country changes
+  useEffect(() => {
+    if (selectedCountry) {
+      const countryCities = planningService.getCitiesByCountry(selectedCountry);
+      setCities(countryCities);
+    } else {
+      setCities([]);
+    }
+  }, [selectedCountry]);
 
   // Function to validate and adjust time to 15-minute increments
   const validateAndAdjustTime = (timeString) => {
@@ -94,21 +106,21 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
     if (error) setError('');
   };
 
-  const handleCityFocus = () => {
-    // Clear any previous city selection when focusing on the input
-    if (formData.city && !cities.find(city => 
-      city.value === formData.city || city.displayName === formData.city
-    )) {
-      // If current city is not in predefined list, keep it as custom city
-      // but ensure coordinates are set
-      if (!formData.latitude || !formData.longitude) {
-        setFormData(prev => ({
-          ...prev,
-          latitude: 32.0853,
-          longitude: 34.7818
-        }));
-      }
-    }
+  const handleCountryChange = (e) => {
+    const countryValue = e.target.value;
+    setSelectedCountry(countryValue);
+    
+    // Clear city when country changes
+    setFormData(prev => ({
+      ...prev,
+      country: countryValue,
+      city: '',
+      latitude: null,
+      longitude: null
+    }));
+    
+    // Clear error when user makes a selection
+    if (error) setError('');
   };
 
   const handleCityChange = (e) => {
@@ -116,26 +128,14 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     
     // Auto-set coordinates when city is selected
-    if (name === 'city' && value) {
-      // First try to find exact match in predefined cities
-      const selectedCity = cities.find(city => 
-        city.value === value || city.displayName === value
-      );
+    if (name === 'city' && value && selectedCountry) {
+      const selectedCity = cities.find(city => city.value === value);
       
       if (selectedCity && selectedCity.lat && selectedCity.lng) {
-        // Use predefined city coordinates
         setFormData(prev => ({
           ...prev,
           latitude: selectedCity.lat,
           longitude: selectedCity.lng
-        }));
-      } else {
-        // For custom cities, we'll set default coordinates (can be updated later)
-        // Default to Tel Aviv area as fallback
-        setFormData(prev => ({
-          ...prev,
-          latitude: 32.0853,
-          longitude: 34.7818
         }));
       }
     }
@@ -157,6 +157,10 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
         }
         break;
       case 2:
+        if (!selectedCountry) {
+          setError('Please select a country.');
+          return false;
+        }
         if (!formData.city.trim()) {
           setError('Please enter a city.');
           return false;
@@ -358,41 +362,50 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
 
               {/* Step 2: Location */}
               <div className={`form-step ${currentStep === 2 ? 'active' : ''}`}>
-                               <div className="form-group">
-                   <label htmlFor="city" className="form-label">City *</label>
-                   <div className="city-input-container">
-                     <input
-                       type="text"
-                       id="city"
-                       name="city"
-                       className="form-input"
-                       value={formData.city}
-                       onChange={handleCityChange}
-                       onFocus={handleCityFocus}
-                       placeholder="Type or select a city"
-                       required
-                       list="cities-list"
-                     />
-                     <datalist id="cities-list">
-                       {cities.map(city => (
-                         <option key={city.value} value={city.displayName} />
-                       ))}
-                     </datalist>
-                   </div>
-                   <div className="form-help">
-                     {formData.city && !cities.find(city => 
-                       city.value === formData.city || city.displayName === formData.city
-                     ) ? (
-                       <span style={{ color: 'var(--accent-1)' }}>
-                         🆕 Custom city - using default coordinates
-                       </span>
-                     ) : (
-                       <span>
-                         💡 Type any city name or select from suggestions
-                       </span>
-                     )}
-                   </div>
-                 </div>
+                <div className="location-selection">
+                  <div className="form-group">
+                    <label htmlFor="country" className="form-label">Country *</label>
+                    <select
+                      id="country"
+                      name="country"
+                      className="form-select"
+                      value={selectedCountry}
+                      onChange={handleCountryChange}
+                      required
+                    >
+                      <option value="">Select a country</option>
+                      {countries.map(country => (
+                        <option key={country.value} value={country.value}>
+                          {country.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="city" className="form-label">City *</label>
+                    <select
+                      id="city"
+                      name="city"
+                      className="form-select"
+                      value={formData.city}
+                      onChange={handleCityChange}
+                      required
+                      disabled={!selectedCountry}
+                    >
+                      <option value="">{selectedCountry ? 'Select a city' : 'Please select a country first'}</option>
+                      {cities.map(city => (
+                        <option key={city.value} value={city.value}>
+                          {city.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-help" style={{ marginTop: '8px' }}>
+                  <span>🌍 Select your country first, then choose from popular cities</span>
+                </div>
 
                 <div className="form-group">
                   <label htmlFor="address" className="form-label">Address (Optional)</label>
@@ -544,42 +557,69 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
               {/* Step 6: Review */}
               <div className={`form-step ${currentStep === 6 ? 'active' : ''}`}>
                 <div className="form-group">
-                  <label htmlFor="dietaryRestrictions" className="form-label">Dietary Restrictions</label>
-                  <input
-                    type="text"
-                    id="dietaryRestrictions"
-                    name="dietaryRestrictions"
-                    className="form-input"
-                    value={formData.dietaryRestrictions}
-                    onChange={handleInputChange}
-                    placeholder="e.g., vegetarian, gluten-free, kosher"
-                  />
+                  <label className="form-label">Dietary Restrictions</label>
+                  <div className="tag-selection">
+                    {['vegetarian', 'vegan', 'gluten-free', 'kosher', 'halal', 'dairy-free', 'nut-free'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`tag-button ${formData.dietaryRestrictions.includes(tag) ? 'selected' : ''}`}
+                        onClick={() => {
+                          const current = formData.dietaryRestrictions;
+                          const updated = current.includes(tag) 
+                            ? current.filter(t => t !== tag)
+                            : [...current, tag];
+                          setFormData(prev => ({ ...prev, dietaryRestrictions: updated }));
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="accessibilityNeeds" className="form-label">Accessibility Needs</label>
-                  <input
-                    type="text"
-                    id="accessibilityNeeds"
-                    name="accessibilityNeeds"
-                    className="form-input"
-                    value={formData.accessibilityNeeds}
-                    onChange={handleInputChange}
-                    placeholder="e.g., wheelchair accessible, elevator"
-                  />
+                  <label className="form-label">Accessibility Needs</label>
+                  <div className="tag-selection">
+                    {['wheelchair_accessible', 'elevator', 'ramp', 'accessible_bathroom', 'braille_signs', 'audio_description'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`tag-button ${formData.accessibilityNeeds.includes(tag) ? 'selected' : ''}`}
+                        onClick={() => {
+                          const current = formData.accessibilityNeeds;
+                          const updated = current.includes(tag) 
+                            ? current.filter(t => t !== tag)
+                            : [...current, tag];
+                          setFormData(prev => ({ ...prev, accessibilityNeeds: updated }));
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="amenities" className="form-label">Preferred Amenities</label>
-                  <input
-                    type="text"
-                    id="amenities"
-                    name="amenities"
-                    className="form-input"
-                    value={formData.amenities}
-                    onChange={handleInputChange}
-                    placeholder="e.g., parking, wifi, outdoor seating"
-                  />
+                  <label className="form-label">Preferred Amenities</label>
+                  <div className="tag-selection">
+                    {['parking', 'wifi', 'outdoor_seating', 'delivery', 'takeout', 'reservations', 'live_music', 'family_friendly', 'romantic', 'casual', 'upscale'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`tag-button ${formData.amenities.includes(tag) ? 'selected' : ''}`}
+                        onClick={() => {
+                          const current = formData.amenities;
+                          const updated = current.includes(tag) 
+                            ? current.filter(t => t !== tag)
+                            : [...current, tag];
+                          setFormData(prev => ({ ...prev, amenities: updated }));
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div style={{ 
