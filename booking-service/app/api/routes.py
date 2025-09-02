@@ -53,13 +53,33 @@ async def check_specific_availability(venue_id: str, time_slot: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/availability/{venue_id}/overlapping/{time_slot}")
+async def check_overlapping_availability(venue_id: str, time_slot: str):
+    """
+    Check availability for overlapping time slots
+    This handles cases where a user wants to book 10:00-12:00 but we have 09:00-11:00 and 11:00-13:00
+    """
+    try:
+        availability = await BookingService.check_overlapping_availability(venue_id, time_slot)
+        
+        if not availability.get("available") and "error" in availability:
+            raise HTTPException(status_code=404, detail=availability["error"])
+        
+        return availability
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/book", response_model=BookingResponse)
 async def make_booking(booking_request: BookingRequest):
     """
-    Make a booking for a specific venue and time slot
+    Make a booking for overlapping time slots
     """
     try:
         booking_response = await BookingService.make_booking(booking_request)
+        
+        if "error" in booking_response:
+            raise HTTPException(status_code=400, detail=booking_response["error"])
+        
         return booking_response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -68,9 +88,10 @@ async def make_booking(booking_request: BookingRequest):
 async def validate_booking(booking_request: BookingRequest):
     """
     Validate if a booking can be made without actually making it
+    Uses overlapping time slot logic
     """
     try:
-        availability = await BookingService.check_availability(
+        availability = await BookingService.check_overlapping_availability(
             booking_request.venue_id, 
             booking_request.time_slot
         )
@@ -79,14 +100,17 @@ async def validate_booking(booking_request: BookingRequest):
             return {
                 "valid": False,
                 "error": availability.get("error", "Time slot not available"),
-                "available_slots": availability.get("counter", 0)
+                "available_slots": availability.get("counter", 0),
+                "overlapping_slots": availability.get("overlapping_slots", [])
             }
         
         return {
             "valid": True,
             "available_slots": availability.get("counter", 0),
             "venue_name": availability.get("venue_name"),
-            "time_slot": booking_request.time_slot
+            "time_slot": booking_request.time_slot,
+            "overlapping_slots": availability.get("overlapping_slots", []),
+            "total_available": availability.get("total_available", 0)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -134,3 +158,35 @@ async def generate_time_slots_for_venue(
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/venue/google-place/{google_place_id}")
+async def find_venue_by_google_place_id(google_place_id: str):
+    """
+    Find a venue by Google Place ID and return its MongoDB ID and basic info
+    This allows the UI to get venue details using Google Place ID
+    """
+    try:
+        venue_info = await BookingService.find_venue_by_google_place_id(google_place_id)
+        
+        if not venue_info.get("found"):
+            raise HTTPException(status_code=404, detail=venue_info["error"])
+        
+        return venue_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/venue/google-place/batch")
+async def find_venues_by_google_place_ids(google_place_ids: list[str]):
+    """
+    Find multiple venues by Google Place IDs and return their MongoDB IDs and basic info
+    This is useful for batch operations
+    """
+    try:
+        venues_info = await BookingService.find_venues_by_google_place_ids(google_place_ids)
+        
+        if not venues_info.get("found"):
+            raise HTTPException(status_code=404, detail=venues_info["error"])
+        
+        return venues_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
