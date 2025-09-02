@@ -148,4 +148,8 @@ public class UserService {
                 .map(user -> false) // Email exists, not available
                 .defaultIfEmpty(true); // Email doesn't exist, available
     }
+    
+    public Mono<User> getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
 }

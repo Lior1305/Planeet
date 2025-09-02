@@ -97,6 +97,25 @@ class VenueSuggestion(BaseModel):
     travel_time_from_previous: Optional[int] = Field(None, description="Travel time from previous venue in minutes")
     travel_distance_km: Optional[float] = Field(None, description="Distance from previous venue in kilometers")
 
+class Participant(BaseModel):
+    """Participant in a group outing"""
+    user_id: str = Field(..., description="User identifier")
+    email: str = Field(..., description="User email address")
+    name: Optional[str] = Field(None, description="User name")
+    status: str = Field("pending", description="Participation status: pending, confirmed, declined")
+    invited_at: datetime = Field(default_factory=datetime.utcnow, description="When the user was invited")
+    confirmed_at: Optional[datetime] = Field(None, description="When the user confirmed participation")
+
+class ConfirmedPlan(BaseModel):
+    """A confirmed plan that will be added to participants' outing history"""
+    plan_id: str = Field(..., description="Plan identifier")
+    selected_plan_index: int = Field(..., description="Index of the selected plan from suggestions (0-2)")
+    creator_user_id: str = Field(..., description="User who created and confirmed the plan")
+    participants: List[Participant] = Field(..., description="List of all participants including creator")
+    plan_details: Dict[str, Any] = Field(..., description="Details of the selected plan")
+    group_size: int = Field(..., description="Total group size")
+    confirmed_at: datetime = Field(default_factory=datetime.utcnow, description="When the plan was confirmed")
+
 class PlanResponse(BaseModel):
     """Response from Venues Service to Planning Service with venue suggestions"""
     plan_id: str = Field(..., description="Plan identifier")
@@ -120,4 +139,24 @@ class PlanResponse(BaseModel):
     
     # Status
     status: str = Field("completed", description="Plan generation status")
-    message: Optional[str] = Field(None, description="Additional information or warnings") 
+    message: Optional[str] = Field(None, description="Additional information or warnings")
+
+class PlanConfirmationRequest(BaseModel):
+    """Request to confirm a plan and optionally add participants"""
+    plan_id: str = Field(..., description="Plan identifier")
+    selected_plan_index: int = Field(..., ge=0, le=2, description="Index of selected plan (0-2)")
+    participant_emails: List[str] = Field(default=[], description="List of email addresses to invite")
+    
+    @field_validator('participant_emails')
+    @classmethod
+    def validate_emails(cls, v: List[str]) -> List[str]:
+        """Validate email addresses"""
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        
+        for email in v:
+            if not re.match(email_pattern, email):
+                raise ValueError(f"Invalid email address: {email}")
+        
+        # Remove duplicates while preserving order
+        return list(dict.fromkeys(v)) 

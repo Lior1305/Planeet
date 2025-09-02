@@ -100,4 +100,11 @@ public class UserController {
         return userService.isEmailAvailable(email)
                 .map(ResponseEntity::ok);
     }
+    
+    @GetMapping("/by-email")
+    public Mono<ResponseEntity<User>> getUserByEmail(@RequestParam String email) {
+        return userService.getUserByEmail(email)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
 }

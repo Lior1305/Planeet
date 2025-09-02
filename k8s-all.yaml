@@ -167,7 +167,7 @@ spec:
     spec:
       containers:
         - name: users-service
-          image: liorberlin/users-service:v3.4.6
+          image: liorberlin/users-service:v3.4.7
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v4.3.0
+          image: dartoledano/planning-service:v4.3.1
           imagePullPolicy: Always
           ports:
             - containerPort: 8001

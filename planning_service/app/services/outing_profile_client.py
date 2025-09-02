@@ -232,6 +232,68 @@ class OutingProfileClient:
             logger.error(f"Unexpected error when fetching ratings for user {user_id}: {e}")
             return {}
     
+    async def add_outing_history(self, outing_data: Dict[str, Any]) -> bool:
+        """
+        Add an outing to user's history in Outing-Profile-Service
+        
+        Args:
+            outing_data: Dictionary containing outing information
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            response = await self.client.post(
+                f"{self.outing_profile_service_url}/outing-history",
+                json=outing_data
+            )
+            
+            if response.status_code == 201:
+                logger.info(f"Outing history added for user {outing_data.get('user_id')}")
+                return True
+            else:
+                logger.error(f"Failed to add outing history: {response.status_code} - {response.text}")
+                return False
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when adding outing history: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error when adding outing history: {e}")
+            return False
+    
+    async def update_outing_status(self, plan_id: str, user_id: str, status: str) -> bool:
+        """
+        Update outing status in user's history
+        
+        Args:
+            plan_id: The plan identifier
+            user_id: The user identifier
+            status: New status ('planned', 'completed', 'cancelled')
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            response = await self.client.put(
+                f"{self.outing_profile_service_url}/outing-history/{plan_id}",
+                json={"user_id": user_id, "status": status}
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Outing status updated for plan {plan_id}, user {user_id}")
+                return True
+            else:
+                logger.error(f"Failed to update outing status: {response.status_code} - {response.text}")
+                return False
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when updating outing status: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error when updating outing status: {e}")
+            return False
+    
     async def close(self):
         """Close the HTTP client"""
         await self.client.aclose()
