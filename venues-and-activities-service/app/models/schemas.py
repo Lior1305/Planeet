@@ -60,7 +60,6 @@ class VenueDiscoveryResponse(BaseModel):
     venue_types_requested: List[str] = Field(..., description="Venue types that were requested")
     location: Location = Field(..., description="Search location")
     radius_km: float = Field(..., description="Search radius used")
-
     discovered_at: str = Field(..., description="Timestamp when venues were discovered")
 
 class VenueCreate(BaseModel):

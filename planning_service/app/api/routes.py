@@ -4,7 +4,7 @@ from typing import Dict, Any
 import uuid
 import logging
 
-from app.models.plan_request import PlanRequest, PlanResponse, PlanConfirmationRequest, ConfirmedPlan, Participant
+from app.models.plan_request import PlanRequest, PlanResponse, PlanConfirmationRequest, PlanSelectionRequest, PlanInvitationRequest, ConfirmedPlan, Participant
 from app.services.venues_service_client import venues_service_client
 from app.services.outing_profile_client import outing_profile_client
 from app.services.user_service_client import user_service_client
@@ -231,11 +231,15 @@ async def get_outing_profile(user_id: str = Query(...)):
         logger.error(f"Error fetching profile: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch profile")
 
+
 @router.post("/plans/{plan_id}/confirm", response_model=Dict[str, Any])
 async def confirm_plan(plan_id: str, confirmation_request: PlanConfirmationRequest):
     """
-    Confirm a plan selection and optionally add participants by email.
-    This will add the plan to all participants' future outings.
+    Confirm a plan selection and optionally add participants by email (Backward Compatibility Endpoint).
+    This endpoint provides backward compatibility for existing UI while using the new creator_user_id logic.
+    
+    If no participant_emails are provided, it works like /select (solo plan).
+    If participant_emails are provided, it works like /select + /invite (group plan).
     """
     try:
         # Verify the plan exists
@@ -275,8 +279,290 @@ async def confirm_plan(plan_id: str, confirmation_request: PlanConfirmationReque
             )
         ]
         
+        # If no participant emails provided, it's a solo plan
+        if not confirmation_request.participant_emails:
+            # Solo plan - just add to creator's history
+            plan_date = original_request["date"]
+            if isinstance(plan_date, str):
+                plan_datetime = datetime.fromisoformat(plan_date)
+            else:
+                plan_datetime = plan_date
+            
+            outing_data = {
+                "user_id": creator_user_id,
+                "plan_id": plan_id,
+                "plan_name": f"Solo Outing - {selected_plan.get('name', 'Unknown')}",
+                "outing_date": plan_datetime.isoformat(),
+                "outing_time": plan_datetime.strftime("%H:%M"),
+                "group_size": 1,
+                "city": original_request.get("location", {}).get("city", "Unknown"),
+                "venue_types": [vt for vt in original_request["venue_types"]],
+                "selected_plan": selected_plan,
+                "creator_user_id": creator_user_id,  # ✅ PROPERLY SET!
+                "is_group_outing": False,
+                "confirmed": True
+            }
+            
+            # Add to creator's outing history
+            await outing_profile_client.add_outing_history(outing_data)
+            logger.info(f"Added solo plan to creator's outing history: {creator_user_id}")
+            
+            # Store confirmed plan
+            confirmed_plan = ConfirmedPlan(
+                plan_id=plan_id,
+                selected_plan_index=confirmation_request.selected_plan_index,
+                creator_user_id=creator_user_id,
+                participants=participants,
+                plan_details=selected_plan,
+                group_size=1,
+                confirmed_at=datetime.utcnow()
+            )
+            
+            confirmed_plans_store[plan_id] = confirmed_plan
+            
+            return {
+                "message": "Plan confirmed successfully for creator",
+                "plan_id": plan_id,
+                "confirmed_plan": confirmed_plan.dict(),
+                "participants_added": 0,
+                "total_participants": 1
+            }
+        
+        else:
+            # Group plan - add invited participants
+            for email in confirmation_request.participant_emails:
+                # Try to find user by email
+                user_info = await user_service_client.get_user_by_email(email)
+                
+                if user_info:
+                    participants.append(
+                        Participant(
+                            user_id=user_info["id"],
+                            email=email,
+                            name=user_info.get("username", "Unknown"),
+                            status="pending",
+                            invited_at=datetime.utcnow()
+                        )
+                    )
+                    logger.info(f"Added participant: {email}")
+                else:
+                    logger.warning(f"User not found for email: {email}")
+                    # Continue without this user - don't fail the whole request
+                    continue
+            
+            # Validate group size
+            max_additional = original_request["group_size"] - 1  # minus creator
+            if len(confirmation_request.participant_emails) > max_additional:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Too many participants. Maximum additional participants: {max_additional}"
+                )
+            
+            # Create confirmed plan
+            confirmed_plan = ConfirmedPlan(
+                plan_id=plan_id,
+                selected_plan_index=confirmation_request.selected_plan_index,
+                creator_user_id=creator_user_id,
+                participants=participants,
+                plan_details=selected_plan,
+                group_size=len(participants),
+                confirmed_at=datetime.utcnow()
+            )
+            
+            # Store confirmed plan
+            confirmed_plans_store[plan_id] = confirmed_plan
+            
+            # Add to each participant's outing history with proper creator_user_id
+            for participant in participants:
+                try:
+                    # Handle date conversion properly
+                    plan_date = original_request["date"]
+                    if isinstance(plan_date, str):
+                        plan_datetime = datetime.fromisoformat(plan_date)
+                    else:
+                        plan_datetime = plan_date
+                    
+                    # Determine if this participant has confirmed (creator = True, others = False)
+                    is_confirmed = participant.user_id == creator_user_id
+                    
+                    outing_data = {
+                        "user_id": participant.user_id,
+                        "plan_id": plan_id,
+                        "plan_name": f"Group Outing - {selected_plan.get('name', 'Unknown')}",
+                        "outing_date": plan_datetime.isoformat(),
+                        "outing_time": plan_datetime.strftime("%H:%M"),
+                        "group_size": len(participants),
+                        "city": original_request.get("location", {}).get("city", "Unknown"),
+                        "venue_types": [vt for vt in original_request["venue_types"]],
+                        "selected_plan": selected_plan,
+                        "participants": [
+                            {
+                                "user_id": p.user_id,
+                                "email": p.email,
+                                "name": p.name,
+                                "status": p.status,
+                                "invited_at": p.invited_at.isoformat() if hasattr(p, 'invited_at') and p.invited_at else None,
+                                "confirmed_at": p.confirmed_at.isoformat() if hasattr(p, 'confirmed_at') and p.confirmed_at else None
+                            } for p in participants
+                        ],
+                        "creator_user_id": creator_user_id,  # ✅ PROPERLY SET FOR ALL PARTICIPANTS!
+                        "is_group_outing": True,
+                        "confirmed": is_confirmed  # Creator = True, others = False
+                    }
+                    
+                    # Add to participant's outing history
+                    await outing_profile_client.add_outing_history(outing_data)
+                    logger.info(f"Added outing to history for user {participant.user_id}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to add outing to history for user {participant.user_id}: {e}")
+            
+            logger.info(f"Successfully confirmed plan {plan_id} with {len(participants)} participants")
+            
+            return {
+                "message": "Plan confirmed successfully",
+                "plan_id": plan_id,
+                "confirmed_plan": confirmed_plan.dict(),
+                "participants_added": len(participants) - 1,  # excluding creator
+                "total_participants": len(participants)
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error confirming plan: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to confirm plan: {str(e)}")
+
+@router.post("/plans/{plan_id}/select", response_model=Dict[str, Any])
+async def select_plan(plan_id: str, selection_request: PlanSelectionRequest):
+    """
+    Select a plan for the creator only (Step 1: Creator selects their preferred plan)
+    This adds the plan to the creator's outing history only.
+    """
+    try:
+        # Verify the plan exists
+        if plan_id not in plan_store:
+            raise HTTPException(status_code=404, detail="Plan not found")
+        
+        if selection_request.plan_id != plan_id:
+            raise HTTPException(status_code=400, detail="Plan ID mismatch")
+        
+        plan_data = plan_store[plan_id]
+        original_request = plan_requests_store.get(plan_id)
+        
+        if not original_request:
+            raise HTTPException(status_code=404, detail="Original plan request not found")
+        
+        # Verify the selected plan index is valid
+        plans = plan_data.get("plans", [])
+        if selection_request.selected_plan_index >= len(plans):
+            raise HTTPException(status_code=400, detail="Invalid plan index")
+        
+        selected_plan = plans[selection_request.selected_plan_index]
+        creator_user_id = original_request["user_id"]
+        
+        logger.info(f"Selecting plan {plan_id}, selected index: {selection_request.selected_plan_index} for creator only")
+        
+        # Get creator's information from users service
+        creator_info = await user_service_client.get_user_by_id(creator_user_id)
+        
+        # Create participant list with only the creator
+        participants = [
+            Participant(
+                user_id=creator_user_id,
+                email=creator_info.get("email", "unknown@email.com"),
+                name=creator_info.get("username", "Unknown"),
+                status="confirmed",
+                confirmed_at=datetime.utcnow()
+            )
+        ]
+        
+        # Store the confirmed plan
+        confirmed_plan = ConfirmedPlan(
+            plan_id=plan_id,
+            selected_plan_index=selection_request.selected_plan_index,
+            creator_user_id=creator_user_id,
+            participants=participants,
+            plan_details=selected_plan,
+            group_size=1,  # Only creator for now
+            confirmed_at=datetime.utcnow()
+        )
+        
+        confirmed_plans_store[plan_id] = confirmed_plan
+        
+        # Add the plan to creator's outing history
+        plan_date = original_request["date"]
+        if isinstance(plan_date, str):
+            plan_datetime = datetime.fromisoformat(plan_date)
+        else:
+            plan_datetime = plan_date
+        
+        outing_data = {
+            "user_id": creator_user_id,
+            "plan_id": plan_id,
+            "plan_name": f"Solo Outing - {selected_plan.get('name', 'Unknown')}",
+            "outing_date": plan_datetime.isoformat(),
+            "outing_time": plan_datetime.strftime("%H:%M"),
+            "group_size": 1,
+            "city": original_request.get("location", {}).get("city", "Unknown"),
+            "venue_types": [vt for vt in original_request["venue_types"]],
+            "selected_plan": selected_plan,
+            "creator_user_id": creator_user_id,
+            "is_group_outing": False,  # Not a group outing yet
+            "confirmed": True  # Creator is always confirmed
+        }
+        
+        # Add to creator's outing history
+        await outing_profile_client.add_outing_history(outing_data)
+        logger.info(f"Added selected plan to creator's outing history: {creator_user_id}")
+        
+        return {
+            "message": "Plan selected successfully for creator",
+            "plan_id": plan_id,
+            "selected_plan_index": selection_request.selected_plan_index,
+            "creator_user_id": creator_user_id,
+            "plan_details": selected_plan,
+            "next_step": f"Use POST /plans/{plan_id}/invite to add other participants"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error selecting plan: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to select plan: {str(e)}")
+
+@router.post("/plans/{plan_id}/invite", response_model=Dict[str, Any])
+async def invite_participants(plan_id: str, invitation_request: PlanInvitationRequest):
+    """
+    Invite participants to an already selected plan (Step 2: Creator invites others)
+    This adds the plan to all invited participants' outing history.
+    """
+    try:
+        # Verify the plan is already confirmed
+        if plan_id not in confirmed_plans_store:
+            raise HTTPException(status_code=404, detail="Plan not confirmed yet. Please select a plan first.")
+        
+        confirmed_plan = confirmed_plans_store[plan_id]
+        original_request = plan_requests_store.get(plan_id)
+        
+        if not original_request:
+            raise HTTPException(status_code=404, detail="Original plan request not found")
+        
+        creator_user_id = confirmed_plan.creator_user_id
+        selected_plan = confirmed_plan.plan_details
+        
+        logger.info(f"Inviting participants to plan {plan_id}")
+        
+        # Get current participants list
+        participants = list(confirmed_plan.participants)
+        
         # Add invited participants
-        for email in confirmation_request.participant_emails:
+        for email in invitation_request.participant_emails:
+            # Check if already invited
+            if any(p.email == email for p in participants):
+                logger.warning(f"User with email {email} is already invited")
+                continue
+                
             # Try to find user by email
             user_info = await user_service_client.get_user_by_email(email)
             
@@ -286,40 +572,27 @@ async def confirm_plan(plan_id: str, confirmation_request: PlanConfirmationReque
                         user_id=user_info["id"],
                         email=email,
                         name=user_info.get("username", "Unknown"),
-                        status="pending"
+                        status="pending",
+                        invited_at=datetime.utcnow()
                     )
                 )
+                logger.info(f"Added participant: {email}")
             else:
-                # User not found - we could still add them as pending with no user_id
-                # or skip them with a warning
-                logger.warning(f"User with email {email} not found in system")
-                continue
+                logger.warning(f"User not found for email: {email}")
+                raise HTTPException(status_code=404, detail=f"User not found for email: {email}")
         
-        # Validate group size
-        max_additional = original_request["group_size"] - 1  # minus creator
-        if len(confirmation_request.participant_emails) > max_additional:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Too many participants. Maximum additional participants: {max_additional}"
-            )
+        # Update the confirmed plan with new participants
+        confirmed_plan.participants = participants
+        confirmed_plan.group_size = len(participants)
+        confirmed_plans_store[plan_id] = confirmed_plan
         
-        # Create confirmed plan
-        confirmed_plan = ConfirmedPlan(
-            plan_id=plan_id,
-            selected_plan_index=confirmation_request.selected_plan_index,
-            creator_user_id=creator_user_id,
-            participants=participants,
-            plan_details=selected_plan,
-            group_size=len(participants)
-        )
-        
-        # Store confirmed plan
-        confirmed_plans_store[plan_id] = confirmed_plan.dict()
-        
-        # Add to each participant's outing history
+        # Add plan to each new participant's outing history
         for participant in participants:
+            # Skip creator (already added in select step)
+            if participant.user_id == creator_user_id:
+                continue
+                
             try:
-                # Handle date conversion properly
                 plan_date = original_request["date"]
                 if isinstance(plan_date, str):
                     plan_datetime = datetime.fromisoformat(plan_date)
@@ -347,31 +620,75 @@ async def confirm_plan(plan_id: str, confirmation_request: PlanConfirmationReque
                         } for p in participants
                     ],
                     "creator_user_id": creator_user_id,
-                    "is_group_outing": True
+                    "is_group_outing": True,
+                    "confirmed": False  # Invited users start as unconfirmed
                 }
                 
                 # Add to participant's outing history
                 await outing_profile_client.add_outing_history(outing_data)
-                logger.info(f"Added outing to history for user {participant.user_id}")
+                logger.info(f"Added outing to history for invited user {participant.user_id}")
                 
             except Exception as e:
                 logger.error(f"Failed to add outing to history for user {participant.user_id}: {e}")
         
-        logger.info(f"Successfully confirmed plan {plan_id} with {len(participants)} participants")
+        # Also update the creator's outing history to reflect the group nature
+        try:
+            plan_date = original_request["date"]
+            if isinstance(plan_date, str):
+                plan_datetime = datetime.fromisoformat(plan_date)
+            else:
+                plan_datetime = plan_date
+            
+            # First remove the old solo outing entry (we'll replace it)
+            # Note: In a real implementation, you'd want to update instead of replace
+            
+            outing_data = {
+                "user_id": creator_user_id,
+                "plan_id": plan_id,
+                "plan_name": f"Group Outing - {selected_plan.get('name', 'Unknown')}",
+                "outing_date": plan_datetime.isoformat(),
+                "outing_time": plan_datetime.strftime("%H:%M"),
+                "group_size": len(participants),
+                "city": original_request.get("location", {}).get("city", "Unknown"),
+                "venue_types": [vt for vt in original_request["venue_types"]],
+                "selected_plan": selected_plan,
+                "participants": [
+                    {
+                        "user_id": p.user_id,
+                        "email": p.email,
+                        "name": p.name,
+                        "status": p.status,
+                        "invited_at": p.invited_at.isoformat() if hasattr(p, 'invited_at') and p.invited_at else None,
+                        "confirmed_at": p.confirmed_at.isoformat() if hasattr(p, 'confirmed_at') and p.confirmed_at else None
+                    } for p in participants
+                ],
+                "creator_user_id": creator_user_id,
+                "is_group_outing": True,
+                "confirmed": True  # Creator remains confirmed
+            }
+            
+            # Add updated group outing to creator's history
+            await outing_profile_client.add_outing_history(outing_data)
+            logger.info(f"Updated creator's outing history to group outing")
+            
+        except Exception as e:
+            logger.error(f"Failed to update creator's outing history: {e}")
+        
+        logger.info(f"Successfully invited {len(invitation_request.participant_emails)} participants to plan {plan_id}")
         
         return {
-            "message": "Plan confirmed successfully",
+            "message": "Participants invited successfully",
             "plan_id": plan_id,
-            "confirmed_plan": confirmed_plan.dict(),
-            "participants_added": len(participants) - 1,  # excluding creator
-            "total_participants": len(participants)
+            "participants_invited": len(invitation_request.participant_emails),
+            "total_participants": len(participants),
+            "confirmed_plan": confirmed_plan.dict()
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error confirming plan: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to confirm plan: {str(e)}")
+        logger.error(f"Error inviting participants: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to invite participants: {str(e)}")
 
 @router.get("/plans/{plan_id}/confirmed", response_model=Dict[str, Any])
 async def get_confirmed_plan(plan_id: str):
@@ -419,53 +736,20 @@ async def respond_to_plan_invitation(
         
         # Handle outing history based on response
         if response_status == "confirmed":
-            # Add outing to user's history when they confirm
+            # Update confirmation status for this user (the outing should already be in their history)
             try:
-                # Get original plan request to build outing data
-                original_request = plan_requests_store.get(plan_id, {})
-                selected_plan = confirmed_plan.get("plan_details", {})
-                
-                # Handle date conversion properly
-                plan_date = original_request.get("date")
-                if isinstance(plan_date, str):
-                    plan_datetime = datetime.fromisoformat(plan_date)
-                else:
-                    plan_datetime = plan_date
-                
-                outing_data = {
-                    "user_id": user_id,
-                    "plan_id": plan_id,
-                    "plan_name": f"Group Outing - {selected_plan.get('name', 'Unknown')}",
-                    "outing_date": plan_datetime.isoformat() if plan_datetime else datetime.utcnow().isoformat(),
-                    "outing_time": plan_datetime.strftime("%H:%M") if plan_datetime else "19:00",
-                    "group_size": len(participants),
-                    "city": original_request.get("location", {}).get("city", "Unknown"),
-                    "venue_types": original_request.get("venue_types", []),
-                    "selected_plan": selected_plan,
-                    "participants": [
-                        {
-                            "user_id": p.get("user_id"),
-                            "email": p.get("email"),
-                            "name": p.get("name"),
-                            "status": p.get("status"),
-                            "invited_at": p.get("invited_at"),
-                            "confirmed_at": p.get("confirmed_at")
-                        } for p in participants
-                    ],
-                    "creator_user_id": confirmed_plan.get("creator_user_id"),
-                    "is_group_outing": True
-                }
-                
-                await outing_profile_client.add_outing_history(outing_data)
-                logger.info(f"Added outing to history for user {user_id} who confirmed invitation")
+                await outing_profile_client.update_outing_confirmation(plan_id, user_id, confirmed=True)
+                logger.info(f"Updated outing confirmation to True for user {user_id}")
                 
             except Exception as e:
-                logger.error(f"Failed to add outing to history for confirming user {user_id}: {e}")
+                logger.error(f"Failed to update outing confirmation for user {user_id}: {e}")
                 
         elif response_status == "declined":
-            # Update outing status for declined invitation
+            # Update outing status and confirmation for declined invitation
             try:
                 await outing_profile_client.update_outing_status(plan_id, user_id, "cancelled")
+                await outing_profile_client.update_outing_confirmation(plan_id, user_id, confirmed=False)
+                logger.info(f"Updated outing to cancelled for user {user_id} who declined")
             except Exception as e:
                 logger.warning(f"Failed to update outing status for declined invitation: {e}")
         

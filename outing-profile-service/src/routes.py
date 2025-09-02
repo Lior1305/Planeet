@@ -114,6 +114,7 @@ def add_outing_history():
         city = data.get("city")
         venue_types = data.get("venue_types", [])
         selected_plan = data.get("selected_plan", {})
+        creator_user_id = data.get("creator_user_id") or user_id  # Auto-set if missing
 
         logger.info(f"Attempting to add outing history: {data}")
 
@@ -132,6 +133,8 @@ def add_outing_history():
             "venue_types": venue_types,
             "selected_plan": selected_plan,
             "status": "planned",
+            "confirmed": data.get("confirmed", False),  # New field for confirmation status
+            "creator_user_id": creator_user_id,  # Track who created the plan
             "created_at": datetime.utcnow().isoformat()
         }
         
@@ -374,6 +377,46 @@ def update_expired_outings():
         
     except Exception as e:
         logger.error(f"Error updating expired outings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/outing-history/<plan_id>/confirm', methods=['PUT'])
+def update_outing_confirmation(plan_id):
+    """Update the confirmation status of an outing in the user's profile"""
+    try:
+        data = request.get_json()
+        user_id = data.get("user_id")
+        confirmed = data.get("confirmed", True)  # Default to True when confirming
+        
+        if not user_id:
+            logger.warning("Missing user_id in request")
+            return jsonify({"error": "user_id is required"}), 400
+        
+        if not isinstance(confirmed, bool):
+            logger.warning(f"Invalid confirmed value: {confirmed}")
+            return jsonify({"error": "confirmed must be a boolean"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Update the specific outing's confirmation status in the user's profile
+        result = profiles_collection.update_one(
+            {"user_id": user_id, "outing_history.plan_id": plan_id},
+            {"$set": {"outing_history.$.confirmed": confirmed}}
+        )
+        
+        if result.modified_count > 0:
+            status_text = "confirmed" if confirmed else "unconfirmed"
+            logger.info(f"Outing confirmation updated to {status_text} for plan_id: {plan_id}")
+            return jsonify({
+                "message": f"Outing {status_text} successfully",
+                "plan_id": plan_id,
+                "confirmed": confirmed
+            }), 200
+        else:
+            logger.warning(f"Outing not found for plan_id: {plan_id} and user_id: {user_id}")
+            return jsonify({"error": "Outing not found"}), 404
+            
+    except Exception as e:
+        logger.error(f"Error updating outing confirmation: {e}")
         return jsonify({"error": str(e)}), 500
 
 @api.route('/outing-history/<plan_id>/ratings', methods=['POST'])
