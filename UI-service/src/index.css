@@ -1929,3 +1929,81 @@ code {
     font-size: 0.8rem;
   }
 }
+
+/* Notification bell styles */
+.notification-bell {
+  position: relative;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.bell-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bell-button:hover {
+  background: var(--background-alt);
+  transform: scale(1.1);
+}
+
+.bell-icon {
+  font-size: 1.1rem;
+  color: var(--text);
+  transition: color 0.2s ease;
+}
+
+.bell-button:hover .bell-icon {
+  color: var(--primary);
+}
+
+.notification-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent-1);
+  border-radius: 50%;
+  border: 2px solid var(--background);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Responsive adjustments for notification bell */
+@media (max-width: 768px) {
+  .notification-bell {
+    margin-right: 8px;
+  }
+  
+  .bell-button {
+    padding: 5px;
+  }
+  
+  .bell-icon {
+    font-size: 1rem;
+  }
+}
