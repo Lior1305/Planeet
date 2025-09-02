@@ -263,12 +263,18 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
 
   const handlePlanSelection = async (selectedPlan) => {
     try {
-      // Save the chosen plan to the outing profile service
-      const outingData = outingProfileService.formatOutingData(selectedPlan, formData, currentUser?.id);
-      await outingProfileService.addOutingToHistory(outingData);
+      // Select the plan with the planning service (this also adds it to outing history)
+      const planIndex = generatedPlans.plans.findIndex(plan => plan.plan_id === selectedPlan.plan_id);
+      if (planIndex === -1) {
+        throw new Error('Selected plan not found in generated plans');
+      }
+      
+      console.log('Selecting plan with planning service...');
+      const result = await planningService.selectPlan(selectedPlan.plan_id, planIndex, selectedPlan, currentUser?.id, formData);
+      console.log('Plan selected successfully!', result);
       
       // Show success message (you can add a toast notification here later)
-      console.log('Plan saved to outing history successfully!');
+      console.log('Plan selection completed successfully!');
       
       // Close modal and notify parent with the selected plan
       onClose();
@@ -276,9 +282,9 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
         onPlanCreated(selectedPlan);
       }
     } catch (error) {
-      console.error('Error saving plan to outing history:', error);
+      console.error('Error selecting plan:', error);
       // You can add error handling here (show error message to user)
-      setError('Failed to save plan to history. Please try again.');
+      setError('Failed to select plan. Please try again.');
     }
   };
 

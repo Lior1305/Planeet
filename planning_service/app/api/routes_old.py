@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Query, Body
 from app.models.plan_request import PlanRequest
-from app.services.venues_service_client import venues_service_client
+from app.services.venues_client import venues_client
 from app.services.user_service_client import user_service_client
 from app.services.outing_profile_client import outing_profile_client
 
@@ -45,9 +45,7 @@ async def create_plan(plan_request: PlanRequest):
             logger.warning(f"Failed to get user profile: {e}. Continuing without profile data.")
         
         # Step 3: Send plan request to Venues Service
-        # Convert PlanRequest object to dictionary for JSON serialization
-        plan_request_dict = plan_request.dict()
-        venues_response = await venues_service_client.generate_venue_plan(plan_request_dict)
+        venues_response = await venues_client.create_plan(plan_request)
         
         if not venues_response or venues_response.get("status") != "completed":
             raise HTTPException(status_code=500, detail="Failed to generate plans from Venues Service")
@@ -122,8 +120,6 @@ async def select_plan_direct(selection_request: Dict[str, Any]):
             raise HTTPException(status_code=400, detail="Missing required fields: plan_id, selected_plan, user_id")
         
         logger.info(f"Selecting plan {plan_id} for user {user_id}")
-        logger.info(f"Selection request data: {selection_request}")
-        logger.info(f"Original plan request: {original_plan_request}")
         
         # Get creator's information from users service
         creator_info = await user_service_client.get_user_by_id(user_id)
@@ -133,11 +129,6 @@ async def select_plan_direct(selection_request: Dict[str, Any]):
         plan_time = original_plan_request.get("time") if original_plan_request else selection_request.get("outing_time")
         group_size = original_plan_request.get("group_size") if original_plan_request else selection_request.get("group_size", 2)
         city = original_plan_request.get("location", {}).get("city") if original_plan_request else selection_request.get("city", "Unknown")
-        
-        logger.info(f"Extracted plan_date: {plan_date}")
-        logger.info(f"Extracted plan_time: {plan_time}")
-        logger.info(f"Extracted group_size: {group_size}")
-        logger.info(f"Extracted city: {city}")
         
         # Parse the date properly
         if plan_date:
@@ -173,9 +164,6 @@ async def select_plan_direct(selection_request: Dict[str, Any]):
             "confirmed": True,
             "status": "planned"
         }
-        
-        logger.info(f"Final outing_date: {outing_date}")
-        logger.info(f"Final outing_time: {outing_time}")
         
         # Add to creator's outing history
         logger.info(f"Adding outing to history with data: {outing_data}")

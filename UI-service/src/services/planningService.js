@@ -6,6 +6,10 @@ class PlanningService {
     // Countries data is now imported from separate file
   }
 
+  getBaseUrl() {
+    return configService.getPlanningServiceUrl();
+  }
+
   async geocodeCity(cityName) {
     return findCityCoordinates(cityName);
   }
@@ -166,6 +170,58 @@ class PlanningService {
     date.setSeconds(0);
     date.setMilliseconds(0);
     return date.toTimeString().slice(0, 5);
+  }
+
+  async selectPlan(planId, selectedPlanIndex, selectedPlan, userId, originalPlanRequest) {
+    try {
+      const response = await fetch(`${this.getBaseUrl()}/v1/plans/select`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan_id: planId,
+          selected_plan_index: selectedPlanIndex,
+          selected_plan: selectedPlan,
+          user_id: userId,
+          original_plan_request: originalPlanRequest
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to select plan');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error selecting plan:', error);
+      throw error;
+    }
+  }
+
+  async inviteParticipants(planId, participantEmails) {
+    try {
+      const response = await fetch(`${this.getBaseUrl()}/v1/plans/${planId}/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          participant_emails: participantEmails
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to send invitations');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error sending invitations:', error);
+      throw error;
+    }
   }
 }
 

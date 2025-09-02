@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import outingProfileService from '../services/outingProfileService.js';
 import userService from '../services/userService.js';
 import RatingModal from './RatingModal.js';
+import InviteModal from './InviteModal.js';
 
 const OutingHistory = () => {
   const [outingHistory, setOutingHistory] = useState(null);
@@ -10,6 +11,8 @@ const OutingHistory = () => {
   const [activeTab, setActiveTab] = useState('future'); // 'future' or 'past'
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const [selectedOuting, setSelectedOuting] = useState(null);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [selectedPlanForInvite, setSelectedPlanForInvite] = useState(null);
   
   const currentUser = userService.getCurrentUser();
 
@@ -187,6 +190,46 @@ const OutingHistory = () => {
     loadOutingHistory();
   };
 
+  const handleInviteFriends = (outing) => {
+    setSelectedPlanForInvite(outing);
+    setInviteModalOpen(true);
+  };
+
+  const handleInviteModalClose = () => {
+    setInviteModalOpen(false);
+    setSelectedPlanForInvite(null);
+    // Reload history to show any updates
+    loadOutingHistory();
+  };
+
+  const handleConfirmInvite = async (planId) => {
+    try {
+      await outingProfileService.updateOutingStatus(planId, 'confirmed', currentUser.id);
+      await loadOutingHistory();
+    } catch (error) {
+      console.error('Error confirming invite:', error);
+      setError('Failed to confirm invite. Please try again.');
+    }
+  };
+
+  const handleDenyInvite = async (planId) => {
+    try {
+      await outingProfileService.updateOutingStatus(planId, 'declined', currentUser.id);
+      await loadOutingHistory();
+    } catch (error) {
+      console.error('Error declining invite:', error);
+      setError('Failed to decline invite. Please try again.');
+    }
+  };
+
+  const isPlanCreator = (outing) => {
+    return outing.creator_user_id === currentUser.id;
+  };
+
+  const isInvitedUser = (outing) => {
+    return outing.creator_user_id !== currentUser.id && !outing.confirmed;
+  };
+
   if (!currentUser) {
     return (
       <div className="outing-history-container">
@@ -256,9 +299,21 @@ const OutingHistory = () => {
                 <div key={outing.plan_id} className="outing-card future">
                   <div className="outing-header">
                     <h3 className="outing-title">{outing.plan_name}</h3>
-                    <span className={`outing-status ${outing.status}`}>
-                      {outing.status}
-                    </span>
+                    <div className="outing-header-right">
+                      {isInvitedUser(outing) && (
+                        <span className="invite-badge">
+                          📧 Invited
+                        </span>
+                      )}
+                      {isPlanCreator(outing) && (
+                        <span className="creator-badge">
+                          👑 Created by you
+                        </span>
+                      )}
+                      <span className={`outing-status ${outing.status}`}>
+                        {outing.status}
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="outing-details">
@@ -273,21 +328,73 @@ const OutingHistory = () => {
                   </div>
 
                   <div className="outing-actions">
-                    <button
-                      onClick={() => updateOutingStatus(outing.plan_id, 'cancelled', currentUser.id)}
-                      className={`btn btn-danger btn-sm ${outing.status === 'cancelled' ? 'disabled' : ''}`}
-                      disabled={outing.status === 'cancelled'}
-                    >
-                      {outing.status === 'cancelled' ? 'Cancelled' : 'Cancel'}
-                    </button>
-                    {outing.status === 'cancelled' && (
-                      <button
-                        onClick={() => deleteOuting(outing.plan_id, currentUser.id)}
-                        className="btn btn-outline btn-sm"
-                        title="Delete this cancelled outing"
-                      >
-                        Delete
-                      </button>
+                    {isPlanCreator(outing) ? (
+                      // Creator actions
+                      <>
+                        {(outing.status === 'planned' || outing.status === 'confirmed') && (
+                          <button
+                            onClick={() => handleInviteFriends(outing)}
+                            className="btn btn-primary btn-sm"
+                            title="Invite friends to this outing"
+                          >
+                            👥 Invite Friends
+                          </button>
+                        )}
+                        <button
+                          onClick={() => updateOutingStatus(outing.plan_id, 'cancelled', currentUser.id)}
+                          className={`btn btn-danger btn-sm ${outing.status === 'cancelled' ? 'disabled' : ''}`}
+                          disabled={outing.status === 'cancelled'}
+                        >
+                          {outing.status === 'cancelled' ? 'Cancelled' : 'Cancel'}
+                        </button>
+                        {outing.status === 'cancelled' && (
+                          <button
+                            onClick={() => deleteOuting(outing.plan_id, currentUser.id)}
+                            className="btn btn-outline btn-sm"
+                            title="Delete this cancelled outing"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </>
+                    ) : isInvitedUser(outing) ? (
+                      // Invited user actions
+                      <>
+                        <button
+                          onClick={() => handleConfirmInvite(outing.plan_id)}
+                          className="btn btn-success btn-sm"
+                          title="Accept this invitation"
+                        >
+                          ✅ Accept
+                        </button>
+                        <button
+                          onClick={() => handleDenyInvite(outing.plan_id)}
+                          className="btn btn-danger btn-sm"
+                          title="Decline this invitation"
+                        >
+                          ❌ Decline
+                        </button>
+                      </>
+                    ) : (
+                      // Regular participant actions
+                      <>
+                        <button
+                          onClick={() => updateOutingStatus(outing.plan_id, 'cancelled', currentUser.id)}
+                          className={`btn btn-danger btn-sm ${outing.status === 'cancelled' ? 'disabled' : ''}`}
+                          disabled={outing.status === 'cancelled'}
+                        >
+                          {outing.status === 'cancelled' ? 'Cancelled' : 'Cancel'}
+                        </button>
+                        {outing.status === 'cancelled' && (
+                          <button
+                            onClick={() => deleteOuting(outing.plan_id, currentUser.id)}
+                            className="btn btn-outline btn-sm"
+                            title="Delete this cancelled outing"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -356,6 +463,15 @@ const OutingHistory = () => {
         onClose={() => setRatingModalOpen(false)}
         outing={selectedOuting}
         onRatingSubmitted={handleRatingSubmitted}
+      />
+
+      {/* Invite Modal */}
+      <InviteModal
+        isOpen={inviteModalOpen}
+        onClose={handleInviteModalClose}
+        planId={selectedPlanForInvite?.plan_id}
+        groupSize={selectedPlanForInvite?.group_size}
+        currentParticipants={selectedPlanForInvite?.participants || []}
       />
     </div>
   );

@@ -261,6 +261,44 @@ class OutingProfileClient:
         except Exception as e:
             logger.error(f"Unexpected error when adding outing history: {e}")
             return False
+
+    async def get_outing_by_plan_id(self, plan_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get an outing by plan ID from Outing-Profile-Service
+        
+        Args:
+            plan_id: The plan identifier
+            
+        Returns:
+            Outing data if found, None otherwise
+        """
+        try:
+            response = await self.client.get(
+                f"{self.outing_profile_service_url}/outing-history?plan_id={plan_id}"
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                # The response might be a list, so get the first item
+                if isinstance(data, list) and len(data) > 0:
+                    return data[0]
+                elif isinstance(data, dict):
+                    return data
+                else:
+                    return None
+            elif response.status_code == 404:
+                logger.info(f"No outing found for plan_id {plan_id}")
+                return None
+            else:
+                logger.error(f"Error fetching outing for plan_id {plan_id}: {response.status_code}")
+                return None
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when fetching outing for plan_id {plan_id}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error when fetching outing for plan_id {plan_id}: {e}")
+            return None
     
     async def update_outing_status(self, plan_id: str, user_id: str, status: str) -> bool:
         """
