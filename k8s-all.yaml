@@ -270,7 +270,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v4.0.4
+          image: dartoledano/venues-service:v4.2.2
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -282,7 +282,8 @@ spec:
             - name: MONGO_URI
               value: "mongodb://mongo:27017/planeet"
             - name: BOOKING_SERVICE_URL
-              value: "http://booking-service-internal:8004"
+              value: "http://booking-service:8004"
+
           resources:
             requests:
               memory: "256Mi"

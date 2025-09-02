@@ -44,7 +44,7 @@ async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
         # First, check if the booking service is healthy
         try:
             async with httpx.AsyncClient(timeout=10.0) as health_client:
-                health_response =await health_client.get(f"{booking_service_url}/v1/health")
+                health_response = await health_client.get(f"{booking_service_url}/health")
                 if health_response.status_code != 200:
                     logger.warning(f"⚠️ Booking service health check failed: {health_response.status_code}")
                     return False
@@ -65,10 +65,11 @@ async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
             logger.info(f"📤 Sending time slot generation request for venue: {venue_name}")
             
             response = await client.post(
-                f"{booking_service_url}/generate-time-slots",
+                f"{booking_service_url}/generate-time-slots",   # ✅ FIXED
                 json={"venue_id": venue_id, "default_counter": 100},
-                headers={"Content-Type": "application/json"}
-            )
+                 headers={"Content-Type": "application/json"}
+        )
+
             
             if response.status_code == 200:
                 result = response.json()
@@ -90,7 +91,7 @@ async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
 
 
 
-# --- FIXED generate_time_slots_for_venue ---
+# --- generate_time_slots_for_venue ---
 async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
     """
     Generate time slots for a venue by calling the booking service
@@ -102,7 +103,7 @@ async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
         # Health check
         try:
             async with httpx.AsyncClient(timeout=10.0) as health_client:
-                health_response = await health_client.get(f"{booking_service_url}/v1/health")
+                health_response = await health_client.get(f"{booking_service_url}/v1/health")  # ✅ with /v1
                 if health_response.status_code != 200:
                     logger.warning(f"⚠️ Booking service health check failed: {health_response.status_code}")
                     return False
@@ -118,7 +119,7 @@ async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
             logger.info(f"📤 Sending time slot generation request for venue: {venue_name}")
 
             response = await client.post(
-                f"{booking_service_url}/v1/generate-time-slots",   # ✅ FIXED: add /v1 prefix
+                f"{booking_service_url}/v1/generate-time-slots",   # ✅ with /v1
                 json={"venue_id": venue_id, "default_counter": 100},
                 headers={"Content-Type": "application/json"}
             )
@@ -145,7 +146,7 @@ async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
         return False
 
 
-# --- FIXED debug_booking_service_connectivity ---
+# --- debug_booking_service_connectivity ---
 async def debug_booking_service_connectivity():
     """
     Debug function to test booking service connectivity
@@ -155,14 +156,13 @@ async def debug_booking_service_connectivity():
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{booking_service_url}/v1/health")  # ✅ FIXED
+            response = await client.get(f"{booking_service_url}/v1/health")  # ✅ with /v1
             logger.info(f"✅ Health check: {response.status_code}")
             logger.info(f"📄 Response: {response.text}")
             return True
     except Exception as e:
         logger.error(f"❌ Health check failed: {e}")
         return False
-
 
 # Helper functions
 def get_venue_by_id(venue_id: str) -> Venue:
