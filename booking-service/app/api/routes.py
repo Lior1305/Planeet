@@ -103,24 +103,6 @@ async def generate_venue_time_slots(request: TimeSlotGenerationRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# @router.post("/generate-time-slots/{venue_id}")
-# async def generate_time_slots_for_venue(
-#     venue_id: str, 
-#     default_counter: int = 100
-# ):
-#     """
-#     Generate time slots for a specific venue by ID
-#     """
-#     try:
-#         request = TimeSlotGenerationRequest(
-#             venue_id=venue_id,
-#             default_counter=default_counter
-#         )
-#         response = await BookingService.generate_venue_time_slots(request)
-#         return response
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.post("/generate-time-slots/{venue_id}")
 async def generate_time_slots_for_venue(
