@@ -1,47 +1,28 @@
 import configService from './config.js';
+import { getAllCountries, getCitiesByCountry, getAllCities, findCityCoordinates } from '../data/countries.js';
 
 class PlanningService {
   constructor() {
-    this.cityCoordinates = {
-      'tel aviv': { lat: 32.0853, lng: 34.7818 },
-      'jerusalem': { lat: 31.7683, lng: 35.2137 },
-      'haifa': { lat: 32.7940, lng: 34.9896 },
-      'beer sheva': { lat: 31.2518, lng: 34.7913 },
-      'eilat': { lat: 29.5577, lng: 34.9519 },
-      'netanya': { lat: 32.3328, lng: 34.8600 },
-      'ashdod': { lat: 31.8044, lng: 34.6500 },
-      'rishon lezion': { lat: 31.9600, lng: 34.8000 },
-      'petah tikva': { lat: 32.0853, lng: 34.8860 },
-      'holon': { lat: 32.0167, lng: 34.7792 },
-      'ramat gan': { lat: 32.0689, lng: 34.8248 },
-      'bat yam': { lat: 32.0233, lng: 34.7503 },
-      'kfar saba': { lat: 32.1750, lng: 34.9070 },
-      'raanana': { lat: 32.1833, lng: 34.8667 },
-      'herzliya': { lat: 32.1667, lng: 34.8333 },
-      'modiin': { lat: 31.8928, lng: 35.0153 },
-      'yavne': { lat: 31.8781, lng: 34.7397 },
-      'rosh haayin': { lat: 32.0950, lng: 34.9567 },
-      'kfar yona': { lat: 32.3167, lng: 34.9333 },
-      'tiberias': { lat: 32.7947, lng: 35.5327 }
-    };
+    // Countries data is now imported from separate file
   }
 
   async geocodeCity(cityName) {
-    if (!cityName.trim()) return null;
-    
-    const normalizedCity = cityName.toLowerCase().trim();
-    return this.cityCoordinates[normalizedCity] || null;
+    return findCityCoordinates(cityName);
   }
 
-  // Get all available cities
+  // Get all available countries
+  getAllCountries() {
+    return getAllCountries();
+  }
+
+  // Get cities for a specific country
+  getCitiesByCountry(countryKey) {
+    return getCitiesByCountry(countryKey);
+  }
+
+  // Get all available cities (for backward compatibility)
   getAllCities() {
-    return Object.entries(this.cityCoordinates).map(([name, coords]) => ({
-      name: name,
-      value: name,
-      displayName: name.charAt(0).toUpperCase() + name.slice(1),
-      lat: coords.lat,
-      lng: coords.lng
-    }));
+    return getAllCities();
   }
 
   validatePlanningFormData(formData) {
@@ -87,18 +68,18 @@ class PlanningService {
         location: {
           latitude: formData.latitude || 32.0853, // Default to Tel Aviv if no coordinates
           longitude: formData.longitude || 34.7818,
-          address: formData.address,
+          address: formData.address || '',
           city: formData.city,
-          country: 'Israel'
+          country: (formData.country && formData.country.toLowerCase()) || 'israel'
         },
-        radius_km: formData.radiusKm,
-        max_venues: formData.maxVenues,
+        radius_km: formData.radiusKm || 5, // Default radius
+        max_venues: formData.maxVenues || formData.venueTypes.length || 1,
         use_personalization: true,
         include_links: true,
         date: `${formData.planDate}T${formData.planTime}:00`,
         group_size: formData.groupSize,
-        budget_range: formData.budgetRange,
-        min_rating: formData.minRating,
+        budget_range: formData.budgetRange || '$$',
+        min_rating: formData.minRating || 4.0, // Default minimum rating
         amenities: formData.amenities ? formData.amenities.split(',').map(a => a.trim()) : null,
         dietary_restrictions: formData.dietaryRestrictions ? formData.dietaryRestrictions.split(',').map(d => d.trim()) : null,
         accessibility_needs: formData.accessibilityNeeds ? formData.accessibilityNeeds.split(',').map(a => a.trim()) : null
@@ -131,36 +112,27 @@ class PlanningService {
   }
 
   getDefaultFormData() {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
     const now = new Date();
-    now.setHours(now.getHours() + 1);
-    
-    // Round time to nearest 15-minute increment
-    const minutes = now.getMinutes();
-    const roundedMinutes = Math.round(minutes / 15) * 15;
-    now.setMinutes(roundedMinutes);
-    now.setSeconds(0);
-    now.setMilliseconds(0);
+    const planTime = this.roundToNearest15Minutes(now);
     
     return {
       planName: '',
-      groupSize: 2,
-      city: '',
+      country: 'israel', // Default to Israel
+      city: 'tel aviv', // Default to Tel Aviv
       address: '',
-      latitude: null,
-      longitude: null,
-      planDate: tomorrow.toISOString().split('T')[0],
-      planTime: now.toTimeString().slice(0, 5),
-      venueTypes: [],
-      budgetRange: 'medium',
-      minRating: 4.0,
-      radiusKm: 5,
-      maxVenues: 1, // Start with 1 since no venue types are selected initially
+      latitude: 32.0853,
+      longitude: 34.7818,
+      planDate: now.toISOString().split('T')[0],
+      planTime: planTime,
+      groupSize: 2,
+      budgetRange: '$$',
+      venueTypes: ['restaurant'],
+      radiusKm: 5, // Default search radius
+      maxVenues: 1, // Default max venues
+      minRating: 4.0, // Default minimum rating
+      amenities: '',
       dietaryRestrictions: '',
-      accessibilityNeeds: '',
-      amenities: ''
+      accessibilityNeeds: ''
     };
   }
 
@@ -185,6 +157,15 @@ class PlanningService {
       { value: 'medium', label: '$$ Mid-range' },
       { value: 'high', label: '$$$ Premium' }
     ];
+  }
+
+  roundToNearest15Minutes(date) {
+    const minutes = date.getMinutes();
+    const roundedMinutes = Math.round(minutes / 15) * 15;
+    date.setMinutes(roundedMinutes);
+    date.setSeconds(0);
+    date.setMilliseconds(0);
+    return date.toTimeString().slice(0, 5);
   }
 }
 
