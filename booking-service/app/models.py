@@ -17,7 +17,7 @@ class Venue(BaseModel):
     time_slots: List[TimeSlot] = Field(..., description="Available time slots with counters")
 
 class BookingRequest(BaseModel):
-    venue_id: str = Field(..., description="ID of the venue to book")
+    google_place_id: str = Field(..., description="Google Place ID of the venue to book")
     time_slot: str = Field(..., description="Time slot to book in format HH:MM-HH:MM")
     user_id: str = Field(..., description="ID of the user making the booking")
 

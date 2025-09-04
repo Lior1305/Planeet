@@ -72,10 +72,10 @@ async def check_overlapping_availability(venue_id: str, time_slot: str):
 @router.post("/book", response_model=BookingResponse)
 async def make_booking(booking_request: BookingRequest):
     """
-    Make a booking for overlapping time slots
+    Make a booking using Google Place ID
     """
     try:
-        booking_response = await BookingService.make_booking(booking_request)
+        booking_response = await BookingService.make_booking_by_google_place_id(booking_request)
         
         if "error" in booking_response:
             raise HTTPException(status_code=400, detail=booking_response["error"])
