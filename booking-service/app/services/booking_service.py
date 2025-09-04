@@ -50,58 +50,294 @@ class BookingService:
                 "available": False,
                 "error": f"Database error: {str(e)}"
             }
-    
+
     @staticmethod
-    async def make_booking(booking_request: BookingRequest) -> BookingResponse:
+    async def check_overlapping_availability(venue_id: str, requested_time_slot: str) -> Dict[str, Any]:
         """
-        Make a booking by decrementing the counter for the selected time slot
+        Check availability for overlapping time slots
+        This handles cases where a user wants to book 10:00-12:00 but we have 09:00-11:00 and 11:00-13:00
+        """
+        try:
+            venues_collection = get_venues_collection()
+            venue = await venues_collection.find_one({"_id": ObjectId(venue_id)})
+            
+            if not venue:
+                return {
+                    "available": False,
+                    "error": "Venue not found"
+                }
+            
+            # Parse requested time range
+            try:
+                req_start, req_end = requested_time_slot.split("-")
+                req_start = datetime.strptime(req_start.strip(), "%H:%M")
+                req_end = datetime.strptime(req_end.strip(), "%H:%M")
+            except ValueError:
+                return {
+                    "available": False,
+                    "error": "Invalid time slot format. Use HH:MM-HH:MM"
+                }
+            
+            # Find overlapping slots
+            overlapping_slots = []
+            total_available = 0
+            
+            for slot in venue.get("time_slots", []):
+                slot_start, slot_end = slot["hours"].split("-")
+                slot_start = datetime.strptime(slot_start.strip(), "%H:%M")
+                slot_end = datetime.strptime(slot_end.strip(), "%H:%M")
+                
+                # Check if slots overlap
+                if slot_start < req_end and req_start < slot_end:
+                    overlapping_slots.append({
+                        "hours": slot["hours"],
+                        "counter": slot["counter"],
+                        "overlap_start": max(slot_start, req_start),
+                        "overlap_end": min(slot_end, req_end)
+                    })
+                    total_available += slot["counter"]
+            
+            if not overlapping_slots:
+                return {
+                    "available": False,
+                    "error": "No overlapping time slots found for the requested time"
+                }
+            
+            # Check if all overlapping slots have availability
+            min_available = min(slot["counter"] for slot in overlapping_slots)
+            
+            return {
+                "available": min_available > 0,
+                "counter": min_available,
+                "venue_name": venue.get("venue_name"),
+                "time_slot": requested_time_slot,
+                "overlapping_slots": overlapping_slots,
+                "total_available": total_available
+            }
+            
+        except Exception as e:
+            logger.error(f"Error checking overlapping availability: {e}")
+            return {
+                "available": False,
+                "error": f"Database error: {str(e)}"
+            }
+
+    @staticmethod
+    async def check_overlapping_availability_by_google_place_id(google_place_id: str, requested_time_slot: str) -> Dict[str, Any]:
+        """
+        Check availability for overlapping time slots using Google Place ID
+        """
+        try:
+            venues_collection = get_venues_collection()
+            venue = await venues_collection.find_one({"google_place_id": google_place_id})
+            
+            if not venue:
+                return {
+                    "available": False,
+                    "error": "Venue not found with the provided Google Place ID"
+                }
+            
+            # Parse requested time range
+            try:
+                req_start, req_end = requested_time_slot.split("-")
+                req_start = datetime.strptime(req_start.strip(), "%H:%M")
+                req_end = datetime.strptime(req_end.strip(), "%H:%M")
+            except ValueError:
+                return {
+                    "available": False,
+                    "error": "Invalid time slot format. Use HH:MM-HH:MM"
+                }
+            
+            # Find overlapping slots
+            overlapping_slots = []
+            total_available = 0
+            
+            for slot in venue.get("time_slots", []):
+                slot_start, slot_end = slot["hours"].split("-")
+                slot_start = datetime.strptime(slot_start.strip(), "%H:%M")
+                slot_end = datetime.strptime(slot_end.strip(), "%H:%M")
+                
+                # Check if slots overlap
+                if slot_start < req_end and req_start < slot_end:
+                    overlapping_slots.append({
+                        "hours": slot["hours"],
+                        "counter": slot["counter"],
+                        "overlap_start": max(slot_start, req_start),
+                        "overlap_end": min(slot_end, req_end)
+                    })
+                    total_available += slot["counter"]
+            
+            if not overlapping_slots:
+                return {
+                    "available": False,
+                    "error": "No overlapping time slots found for the requested time"
+                }
+            
+            # Check if all overlapping slots have availability
+            min_available = min(slot["counter"] for slot in overlapping_slots)
+            
+            return {
+                "available": min_available > 0,
+                "counter": min_available,
+                "venue_name": venue.get("venue_name"),
+                "time_slot": requested_time_slot,
+                "overlapping_slots": overlapping_slots,
+                "total_available": total_available
+            }
+            
+        except Exception as e:
+            logger.error(f"Error checking overlapping availability by Google Place ID: {e}")
+            return {
+                "available": False,
+                "error": f"Database error: {str(e)}"
+            }
+
+    @staticmethod
+    async def make_booking(request: BookingRequest) -> Dict[str, Any]:
+        """
+        Make a booking for overlapping time slots
+        """
+        try:
+            venues_collection = get_venues_collection()
+            venue = await venues_collection.find_one({"_id": ObjectId(request.venue_id)})
+            
+            if not venue:
+                return {"error": "Venue not found"}
+            
+            # Parse requested time range
+            try:
+                req_start, req_end = request.time_slot.split("-")
+                req_start = datetime.strptime(req_start.strip(), "%H:%M")
+                req_end = datetime.strptime(req_end.strip(), "%H:%M")
+            except ValueError:
+                return {"error": "Invalid time slot format. Use HH:MM-HH:MM"}
+            
+            # Find overlapping slots
+            overlapping_slots = []
+            for slot in venue.get("time_slots", []):
+                slot_start, slot_end = slot["hours"].split("-")
+                slot_start = datetime.strptime(slot_start.strip(), "%H:%M")
+                slot_end = datetime.strptime(slot_end.strip(), "%H:%M")
+                
+                # Check if slots overlap
+                if slot_start < req_end and req_start < slot_end:
+                    overlapping_slots.append(slot)
+            
+            if not overlapping_slots:
+                return {"error": "No overlapping time slots found for the requested time"}
+            
+            # Check if all overlapping slots have availability
+            if not all(slot["counter"] > 0 for slot in overlapping_slots):
+                return {"error": "One or more overlapping time slots are fully booked"}
+            
+            # Decrement availability for all overlapping slots
+            for slot in overlapping_slots:
+                slot["counter"] -= 1
+            
+            # Update the venue in the database
+            result = await venues_collection.update_one(
+                {"_id": ObjectId(request.venue_id)},
+                {"$set": {"time_slots": venue["time_slots"]}}
+            )
+            
+            if result.modified_count == 0:
+                return {"error": "Failed to update venue availability"}
+            
+            # Generate booking ID
+            booking_id = str(uuid.uuid4())
+            
+            # Create booking response
+            return {
+                "success": True,
+                "booking_id": booking_id,
+                "venue_id": request.venue_id,
+                "venue_name": venue.get("venue_name"),
+                "time_slot": request.time_slot,
+                "user_id": request.user_id,
+                "booking_date": datetime.utcnow(),
+                "status": "confirmed",
+                "reserved_slots": [slot["hours"] for slot in overlapping_slots],
+                "message": f"Successfully booked {request.time_slot} at {venue.get('venue_name')}"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error making booking: {e}")
+            return {"error": f"Booking failed: {str(e)}"}
+
+    @staticmethod
+    async def make_booking_by_google_place_id(request) -> Dict[str, Any]:
+        """
+        Make a booking using Google Place ID instead of MongoDB ID
         """
         try:
             venues_collection = get_venues_collection()
             
-            # First check availability
-            availability = await BookingService.check_availability(
-                booking_request.venue_id, 
-                booking_request.time_slot
-            )
+            # First, find the venue by Google Place ID
+            venue = await venues_collection.find_one({"google_place_id": request.google_place_id})
             
-            if not availability.get("available"):
-                raise Exception(availability.get("error", "Time slot not available"))
+            if not venue:
+                return {"error": "Venue not found with the provided Google Place ID"}
             
-            # Use atomic operation to decrement counter and ensure consistency
+            # Parse requested time range
+            try:
+                req_start, req_end = request.time_slot.split("-")
+                req_start = datetime.strptime(req_start.strip(), "%H:%M")
+                req_end = datetime.strptime(req_end.strip(), "%H:%M")
+            except ValueError:
+                return {"error": "Invalid time slot format. Use HH:MM-HH:MM"}
+            
+            # Find overlapping slots
+            overlapping_slots = []
+            for slot in venue.get("time_slots", []):
+                slot_start, slot_end = slot["hours"].split("-")
+                slot_start = datetime.strptime(slot_start.strip(), "%H:%M")
+                slot_end = datetime.strptime(slot_end.strip(), "%H:%M")
+                
+                # Check if slots overlap
+                if slot_start < req_end and req_start < slot_end:
+                    overlapping_slots.append(slot)
+            
+            if not overlapping_slots:
+                return {"error": "No overlapping time slots found for the requested time"}
+            
+            # Check if all overlapping slots have availability
+            if not all(slot["counter"] > 0 for slot in overlapping_slots):
+                return {"error": "One or more overlapping time slots are fully booked"}
+            
+            # Decrement availability for all overlapping slots
+            for slot in overlapping_slots:
+                slot["counter"] -= 1
+            
+            # Update the venue in the database
             result = await venues_collection.update_one(
-                {
-                    "_id": ObjectId(booking_request.venue_id),
-                    "time_slots.hours": booking_request.time_slot,
-                    "time_slots.counter": {"$gt": 0}
-                },
-                {
-                    "$inc": {"time_slots.$.counter": -1}
-                }
+                {"_id": venue["_id"]},
+                {"$set": {"time_slots": venue["time_slots"]}}
             )
             
             if result.modified_count == 0:
-                raise Exception("Failed to book - no slots available or venue not found")
+                return {"error": "Failed to update venue availability"}
             
-            # Get venue name for response
-            venue = await venues_collection.find_one({"_id": ObjectId(booking_request.venue_id)})
-            venue_name = venue.get("venue_name", "Unknown Venue") if venue else "Unknown Venue"
+            # Generate booking ID
+            booking_id = str(uuid.uuid4())
             
             # Create booking response
-            booking_response = BookingResponse(
-                booking_id=str(uuid.uuid4()),
-                venue_id=booking_request.venue_id,
-                venue_name=venue_name,
-                time_slot=booking_request.time_slot,
-                user_id=booking_request.user_id,
-                booking_date=datetime.utcnow(),
-                status="confirmed"
-            )
-            
-            return booking_response
+            return {
+                "success": True,
+                "booking_id": booking_id,
+                "venue_id": str(venue["_id"]),
+                "venue_name": venue.get("venue_name"),
+                "time_slot": request.time_slot,
+                "user_id": request.user_id,
+                "booking_date": datetime.utcnow(),
+                "status": "confirmed",
+                "reserved_slots": [slot["hours"] for slot in overlapping_slots],
+                "message": f"Successfully booked {request.time_slot} at {venue.get('venue_name')}"
+            }
             
         except Exception as e:
-            raise Exception(f"Booking failed: {str(e)}")
+            logger.error(f"Error making booking by Google Place ID: {e}")
+            return {"error": f"Booking failed: {str(e)}"}
+
     
     @staticmethod
     async def get_venue_availability(venue_id: str) -> Dict[str, Any]:
@@ -122,13 +358,93 @@ class BookingService:
                 "venue_id": venue_id,
                 "venue_name": venue.get("venue_name"),
                 "venue_type": venue.get("venue_type"),
-                "open_hours": venue.get("open_hours"),
+                "opening_hours": venue.get("opening_hours"),
                 "time_slots": venue.get("time_slots", [])
             }
             
         except Exception as e:
             return {
                 "error": f"Database error: {str(e)}"
+            }
+
+    @staticmethod
+    async def find_venue_by_google_place_id(google_place_id: str) -> Dict[str, Any]:
+        """
+        Find a venue by Google Place ID and return its MongoDB ID and basic info
+        """
+        try:
+            venues_collection = get_venues_collection()
+            
+            # Find the venue by Google Place ID
+            venue = await venues_collection.find_one({"google_place_id": google_place_id})
+            
+            if not venue:
+                return {
+                    "found": False,
+                    "error": "Venue not found with the provided Google Place ID"
+                }
+            
+            return {
+                "found": True,
+                "venue_id": str(venue["_id"]),  # Convert ObjectId to string
+                "venue_name": venue.get("venue_name"),
+                "venue_type": venue.get("venue_type"),
+                "opening_hours": venue.get("opening_hours"),
+                "google_place_id": venue.get("google_place_id"),
+                "has_time_slots": len(venue.get("time_slots", [])) > 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error finding venue by Google Place ID: {e}")
+            return {
+                "found": False,
+                "error": f"Database error: {str(e)}"
+            }
+
+    @staticmethod
+    async def find_venues_by_google_place_ids(google_place_ids: list) -> Dict[str, Any]:
+        """
+        Find multiple venues by Google Place IDs and return their MongoDB IDs and basic info
+        """
+        try:
+            venues_collection = get_venues_collection()
+            
+            # Find venues by Google Place IDs
+            venues = await venues_collection.find(
+                {"google_place_id": {"$in": google_place_ids}}
+            ).to_list(length=None)
+            
+            if not venues:
+                return {
+                    "found": False,
+                    "error": "No venues found with the provided Google Place IDs",
+                    "venues": []
+                }
+            
+            # Format the response
+            venue_list = []
+            for venue in venues:
+                venue_list.append({
+                    "venue_id": str(venue["_id"]),
+                    "venue_name": venue.get("venue_name"),
+                    "venue_type": venue.get("venue_type"),
+                    "opening_hours": venue.get("opening_hours"),
+                    "google_place_id": venue.get("google_place_id"),
+                    "has_time_slots": len(venue.get("time_slots", [])) > 0
+                })
+            
+            return {
+                "found": True,
+                "count": len(venue_list),
+                "venues": venue_list
+            }
+            
+        except Exception as e:
+            logger.error(f"Error finding venues by Google Place IDs: {e}")
+            return {
+                "found": False,
+                "error": f"Database error: {str(e)}",
+                "venues": []
             }
 
     @staticmethod
