@@ -583,8 +583,8 @@ async def invite_participants(plan_id: str, invitation_request: PlanInvitationRe
         
         # Update the creator's existing plan to reflect the new participants
         try:
-            # Update the existing plan in the creator's outing history with new participants
-            await outing_profile_client.add_participants_to_plan(plan_id, new_participants)
+            # Update the creator's plan specifically with new participants
+            await outing_profile_client.update_creator_plan_participants(plan_id, creator_user_id, new_participants)
             logger.info(f"Updated creator's outing history to group outing")
             
         except Exception as e:

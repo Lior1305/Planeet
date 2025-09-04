@@ -421,6 +421,41 @@ class OutingProfileClient:
             logger.error(f"Unexpected error when adding participants to plan {plan_id}: {e}")
             return False
     
+    async def update_creator_plan_participants(self, plan_id: str, creator_user_id: str, new_participants: list) -> bool:
+        """
+        Update the creator's plan with new participants
+        
+        Args:
+            plan_id: The plan identifier
+            creator_user_id: The creator's user ID
+            new_participants: List of new participants to add
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            response = await self.client.put(
+                f"{self.outing_profile_service_url}/plans/{plan_id}/creator-participants",
+                json={
+                    "creator_user_id": creator_user_id,
+                    "new_participants": new_participants
+                }
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Updated creator's plan {plan_id} with {len(new_participants)} new participants")
+                return True
+            else:
+                logger.error(f"Failed to update creator's plan {plan_id}: {response.status_code} - {response.text}")
+                return False
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when updating creator's plan {plan_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error when updating creator's plan {plan_id}: {e}")
+            return False
+
     async def respond_to_plan_invitation(self, plan_id: str, user_id: str, status: str) -> bool:
         """
         Allow participants to respond to plan invitation

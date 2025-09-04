@@ -610,27 +610,45 @@ def add_participants_to_plan(plan_id):
         existing_plan = plan_profile["outing_history"][0]
         creator_user_id = existing_plan.get("creator_user_id")
         
-        # Create new participants
+        # Get existing participants to avoid duplicates
+        existing_participants = existing_plan.get('participants', [])
+        existing_user_ids = {p['user_id'] for p in existing_participants}
+        
+        # Create new participants (only if not already invited)
         new_participants = []
         for p_data in new_participants_data:
-            participant = {
-                "user_id": p_data['user_id'],
-                "email": p_data['email'],
-                "name": p_data['name'],
-                "status": p_data.get('status', 'pending'),
-                "invited_at": datetime.utcnow().isoformat(),
-                "confirmed_at": None
-            }
-            new_participants.append(participant)
+            if p_data['user_id'] not in existing_user_ids:
+                participant = {
+                    "user_id": p_data['user_id'],
+                    "email": p_data['email'],
+                    "name": p_data['name'],
+                    "status": p_data.get('status', 'pending'),
+                    "invited_at": datetime.utcnow().isoformat(),
+                    "confirmed_at": None
+                }
+                new_participants.append(participant)
+            else:
+                logger.warning(f"User {p_data['user_id']} is already a participant in plan {plan_id}")
         
-        # Update the plan with new participants
-        result = profiles_collection.update_one(
+        if not new_participants:
+            logger.info("No new participants to add (all were already invited)")
+            return jsonify({
+                "message": "No new participants added (all were already invited)",
+                "plan_id": plan_id,
+                "participants_added": 0
+            }), 200
+        
+        # Calculate new group size (total participants)
+        total_participants = len(existing_participants) + len(new_participants)
+        
+        # Update the plan with new participants in ALL profiles that have this plan
+        result = profiles_collection.update_many(
             {"outing_history.plan_id": plan_id},
             {
                 "$push": {"outing_history.$.participants": {"$each": new_participants}},
                 "$set": {
                     "outing_history.$.is_group_outing": True,
-                    "outing_history.$.group_size": existing_plan.get('group_size', 1) + len(new_participants)
+                    "outing_history.$.group_size": total_participants
                 }
             }
         )
@@ -650,6 +668,108 @@ def add_participants_to_plan(plan_id):
         logger.error(f"Error adding participants: {e}")
         return jsonify({"error": str(e)}), 500
 
+@api.route('/plans/<plan_id>/creator-participants', methods=['PUT'])
+def update_creator_plan_participants(plan_id):
+    """Update the creator's plan with new participants"""
+    try:
+        data = request.get_json()
+        creator_user_id = data.get('creator_user_id')
+        new_participants_data = data.get('new_participants', [])
+        
+        if not creator_user_id:
+            logger.warning("Creator user ID is required")
+            return jsonify({"error": "creator_user_id is required"}), 400
+        
+        if not new_participants_data:
+            logger.warning("No new participants provided")
+            return jsonify({"error": "new_participants are required"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Find the creator's profile with this plan
+        creator_profile = profiles_collection.find_one(
+            {
+                "user_id": creator_user_id,
+                "outing_history.plan_id": plan_id
+            }
+        )
+        
+        if not creator_profile:
+            logger.warning(f"Creator profile not found for user {creator_user_id} with plan {plan_id}")
+            return jsonify({"error": "Creator profile not found"}), 404
+        
+        # Find the specific plan in the creator's outing history
+        plan_index = None
+        for i, outing in enumerate(creator_profile.get("outing_history", [])):
+            if outing.get("plan_id") == plan_id:
+                plan_index = i
+                break
+        
+        if plan_index is None:
+            logger.warning(f"Plan {plan_id} not found in creator's outing history")
+            return jsonify({"error": "Plan not found in creator's outing history"}), 404
+        
+        # Get existing participants to avoid duplicates
+        existing_participants = creator_profile["outing_history"][plan_index].get('participants', [])
+        existing_user_ids = {p['user_id'] for p in existing_participants}
+        
+        # Create new participants (only if not already invited)
+        new_participants = []
+        for p_data in new_participants_data:
+            if p_data['user_id'] not in existing_user_ids:
+                participant = {
+                    "user_id": p_data['user_id'],
+                    "email": p_data['email'],
+                    "name": p_data['name'],
+                    "status": p_data.get('status', 'pending'),
+                    "invited_at": datetime.utcnow().isoformat(),
+                    "confirmed_at": None
+                }
+                new_participants.append(participant)
+            else:
+                logger.warning(f"User {p_data['user_id']} is already a participant in creator's plan {plan_id}")
+        
+        if not new_participants:
+            logger.info("No new participants to add to creator's plan (all were already invited)")
+            return jsonify({
+                "message": "No new participants added to creator's plan (all were already invited)",
+                "plan_id": plan_id,
+                "participants_added": 0
+            }), 200
+        
+        # Calculate new group size (total participants)
+        total_participants = len(existing_participants) + len(new_participants)
+        
+        # Update the creator's plan with new participants
+        result = profiles_collection.update_one(
+            {
+                "user_id": creator_user_id,
+                "outing_history.plan_id": plan_id
+            },
+            {
+                "$push": {f"outing_history.{plan_index}.participants": {"$each": new_participants}},
+                "$set": {
+                    f"outing_history.{plan_index}.is_group_outing": True,
+                    f"outing_history.{plan_index}.group_size": total_participants
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"Updated creator's plan {plan_id} with {len(new_participants)} new participants")
+            return jsonify({
+                "message": f"Updated creator's plan with {len(new_participants)} new participants successfully",
+                "plan_id": plan_id,
+                "participants_added": len(new_participants)
+            }), 200
+        else:
+            logger.warning(f"Failed to update creator's plan: {plan_id}")
+            return jsonify({"error": "Failed to update creator's plan"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error updating creator's plan participants: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @api.route('/plans/<plan_id>/participants/<user_id>/respond', methods=['PUT'])
 def respond_to_plan_invitation(plan_id, user_id):
     """Allow participants to confirm or decline plan invitation"""
@@ -663,20 +783,27 @@ def respond_to_plan_invitation(plan_id, user_id):
         
         profiles_collection = db.get_profiles_collection()
         
-        # Update participant status in the plan
+        # Find the profile with the plan and update the participant status
+        # We need to use arrayFilters to update nested array elements
+        array_filters = [
+            {"plan.plan_id": plan_id},
+            {"participant.user_id": user_id}
+        ]
+        
         update_data = {
-            f"outing_history.$.participants.$.status": response_status
+            "outing_history.$[plan].participants.$[participant].status": response_status
         }
         
         if response_status == "confirmed":
-            update_data[f"outing_history.$.participants.$.confirmed_at"] = datetime.utcnow().isoformat()
+            update_data["outing_history.$[plan].participants.$[participant].confirmed_at"] = datetime.utcnow().isoformat()
         
-        result = profiles_collection.update_one(
+        result = profiles_collection.update_many(
             {
                 "outing_history.plan_id": plan_id,
                 "outing_history.participants.user_id": user_id
             },
-            {"$set": update_data}
+            {"$set": update_data},
+            array_filters=array_filters
         )
         
         if result.modified_count > 0:

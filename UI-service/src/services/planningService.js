@@ -197,13 +197,12 @@ class PlanningService {
 
   async respondToPlanInvitation(planId, userId, status) {
     try {
-      const response = await fetch(`${configService.getPlanningServiceUrl()}/v1/plans/${planId}/respond`, {
-        method: 'PUT',
+      const response = await fetch(`${configService.getPlanningServiceUrl()}/v1/plans/${planId}/participants/${userId}/respond`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: userId,
           status: status
         })
       });
