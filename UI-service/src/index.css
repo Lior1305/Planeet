@@ -434,7 +434,8 @@ code {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2047,6 +2048,64 @@ code {
 .invite-modal {
   max-width: 500px;
   width: 90%;
+  background: var(--background);
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.invite-modal textarea {
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  background-color: var(--background);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.invite-modal textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  background-color: var(--background-alt);
+}
+
+.invite-modal textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.invite-modal textarea:hover {
+  border-color: var(--primary);
+  background-color: var(--background-alt);
+}
+
+.invite-modal .form-group {
+  margin-bottom: 24px;
+}
+
+.invite-modal .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.invite-modal .help-text {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin-top: 4px;
+  opacity: 0.8;
 }
 
 .plan-info {
@@ -2172,6 +2231,7 @@ code {
   color: #6b7280;
   transform: none;
 }
+
 
 /* Responsive adjustments for tags */
 @media (max-width: 768px) {
