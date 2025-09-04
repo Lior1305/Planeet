@@ -123,6 +123,76 @@ class BookingService:
             }
 
     @staticmethod
+    async def check_overlapping_availability_by_google_place_id(google_place_id: str, requested_time_slot: str) -> Dict[str, Any]:
+        """
+        Check availability for overlapping time slots using Google Place ID
+        """
+        try:
+            venues_collection = get_venues_collection()
+            venue = await venues_collection.find_one({"google_place_id": google_place_id})
+            
+            if not venue:
+                return {
+                    "available": False,
+                    "error": "Venue not found with the provided Google Place ID"
+                }
+            
+            # Parse requested time range
+            try:
+                req_start, req_end = requested_time_slot.split("-")
+                req_start = datetime.strptime(req_start.strip(), "%H:%M")
+                req_end = datetime.strptime(req_end.strip(), "%H:%M")
+            except ValueError:
+                return {
+                    "available": False,
+                    "error": "Invalid time slot format. Use HH:MM-HH:MM"
+                }
+            
+            # Find overlapping slots
+            overlapping_slots = []
+            total_available = 0
+            
+            for slot in venue.get("time_slots", []):
+                slot_start, slot_end = slot["hours"].split("-")
+                slot_start = datetime.strptime(slot_start.strip(), "%H:%M")
+                slot_end = datetime.strptime(slot_end.strip(), "%H:%M")
+                
+                # Check if slots overlap
+                if slot_start < req_end and req_start < slot_end:
+                    overlapping_slots.append({
+                        "hours": slot["hours"],
+                        "counter": slot["counter"],
+                        "overlap_start": max(slot_start, req_start),
+                        "overlap_end": min(slot_end, req_end)
+                    })
+                    total_available += slot["counter"]
+            
+            if not overlapping_slots:
+                return {
+                    "available": False,
+                    "error": "No overlapping time slots found for the requested time"
+                }
+            
+            # Check if all overlapping slots have availability
+            min_available = min(slot["counter"] for slot in overlapping_slots)
+            
+            return {
+                "available": min_available > 0,
+                "counter": min_available,
+                "venue_name": venue.get("venue_name"),
+                "time_slot": requested_time_slot,
+                "overlapping_slots": overlapping_slots,
+                "total_available": total_available
+            }
+            
+        except Exception as e:
+            logger.error(f"Error checking overlapping availability by Google Place ID: {e}")
+            return {
+                "available": False,
+                "error": f"Database error: {str(e)}"
+            }
+
+    @staticmethod
     async def make_booking(request: BookingRequest) -> Dict[str, Any]:
         """
         Make a booking for overlapping time slots

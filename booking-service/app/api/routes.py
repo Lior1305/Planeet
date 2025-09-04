@@ -53,14 +53,14 @@ async def check_specific_availability(venue_id: str, time_slot: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/availability/{venue_id}/overlapping/{time_slot}")
-async def check_overlapping_availability(venue_id: str, time_slot: str):
+@router.get("/availability/google-place/{google_place_id}/overlapping/{time_slot}")
+async def check_overlapping_availability_by_google_place_id(google_place_id: str, time_slot: str):
     """
-    Check availability for overlapping time slots
+    Check availability for overlapping time slots using Google Place ID
     This handles cases where a user wants to book 10:00-12:00 but we have 09:00-11:00 and 11:00-13:00
     """
     try:
-        availability = await BookingService.check_overlapping_availability(venue_id, time_slot)
+        availability = await BookingService.check_overlapping_availability_by_google_place_id(google_place_id, time_slot)
         
         if not availability.get("available") and "error" in availability:
             raise HTTPException(status_code=404, detail=availability["error"])

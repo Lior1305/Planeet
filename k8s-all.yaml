@@ -324,7 +324,7 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v2.1.5
+          image: liorberlin/booking-service:v2.1.6
           imagePullPolicy: Always
           ports:
             - containerPort: 8004  # container listens on 8004
