@@ -105,7 +105,7 @@ class OutingProfileService {
   }
 
   // Helper method to format outing data for the outing profile service
-  formatOutingData(selectedPlan, formData, userId) {
+  formatOutingData(selectedPlan, formData, userId, currentUser = null) {
     return {
       user_id: userId,
       plan_id: selectedPlan.plan_id,
@@ -115,7 +115,19 @@ class OutingProfileService {
       group_size: formData.groupSize,
       city: formData.city,
       venue_types: formData.venueTypes,
-      selected_plan: selectedPlan
+      selected_plan: selectedPlan,
+      creator_user_id: userId,  // Set creator as the current user
+      confirmed: true,  // Creator is always confirmed
+      participants: [  // Add creator as the first participant
+        {
+          user_id: userId,
+          email: currentUser?.email || "user@example.com",
+          name: currentUser?.username || currentUser?.name || "User",
+          status: "confirmed",
+          confirmed_at: new Date().toISOString()
+        }
+      ],
+      is_group_outing: formData.groupSize > 1
     };
   }
 
