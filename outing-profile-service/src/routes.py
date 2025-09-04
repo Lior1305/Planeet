@@ -102,7 +102,7 @@ def delete_profile():
 
 @api.route('/outing-history', methods=['POST'])
 def add_outing_history():
-    """Add a new outing to user's profile history"""
+    """Add a new outing to user's profile history with participants support"""
     try:
         data = request.get_json()
         user_id = data.get("user_id")
@@ -115,6 +115,8 @@ def add_outing_history():
         venue_types = data.get("venue_types", [])
         selected_plan = data.get("selected_plan", {})
         creator_user_id = data.get("creator_user_id") or user_id  # Auto-set if missing
+        participants = data.get("participants", [])  # New field for participants
+        is_group_outing = data.get("is_group_outing", len(participants) > 1)
 
         logger.info(f"Attempting to add outing history: {data}")
 
@@ -122,7 +124,7 @@ def add_outing_history():
             logger.warning("Missing required fields in request")
             return jsonify({"error": "user_id, plan_id, plan_name, outing_date, outing_time, group_size, and city are required"}), 400
 
-        # Create the outing entry
+        # Create the outing entry with participants
         outing_entry = {
             "plan_id": plan_id,
             "plan_name": plan_name,
@@ -135,6 +137,8 @@ def add_outing_history():
             "status": "planned",
             "confirmed": data.get("confirmed", False),  # New field for confirmation status
             "creator_user_id": creator_user_id,  # Track who created the plan
+            "participants": participants,  # List of participants
+            "is_group_outing": is_group_outing,  # Whether this is a group outing
             "created_at": datetime.utcnow().isoformat()
         }
         
@@ -495,4 +499,198 @@ def add_outing_ratings(plan_id):
             
     except Exception as e:
         logger.error(f"Error adding outing ratings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Enhanced Plan Management Endpoints using existing outing history structure
+
+@api.route('/plans/<plan_id>', methods=['GET'])
+def get_plan(plan_id):
+    """Get a specific plan by ID from outing history"""
+    try:
+        profiles_collection = db.get_profiles_collection()
+        
+        # Find the plan in any user's outing history
+        plan_data = profiles_collection.find_one(
+            {"outing_history.plan_id": plan_id},
+            {"outing_history.$": 1, "_id": 0}
+        )
+        
+        if plan_data and plan_data.get("outing_history"):
+            plan = plan_data["outing_history"][0]
+            logger.info(f"Retrieved plan: {plan_id}")
+            return jsonify(plan), 200
+        else:
+            logger.warning(f"Plan not found: {plan_id}")
+            return jsonify({"error": "Plan not found"}), 404
+            
+    except Exception as e:
+        logger.error(f"Error retrieving plan: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/plans', methods=['GET'])
+def get_user_plans():
+    """Get all plans for a specific user (as creator or participant)"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            logger.warning("Missing user_id query parameter")
+            return jsonify({"error": "user_id query parameter is required"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Find all plans where user is creator or participant
+        plans = []
+        
+        # Find plans where user is creator
+        creator_plans = profiles_collection.find(
+            {"user_id": user_id, "outing_history.creator_user_id": user_id},
+            {"outing_history.$": 1, "_id": 0}
+        )
+        
+        for profile in creator_plans:
+            if profile.get("outing_history"):
+                plans.extend(profile["outing_history"])
+        
+        # Find plans where user is participant (but not creator)
+        participant_plans = profiles_collection.find(
+            {
+                "outing_history": {
+                    "$elemMatch": {
+                        "participants.user_id": user_id,
+                        "creator_user_id": {"$ne": user_id}
+                    }
+                }
+            },
+            {"outing_history": 1, "_id": 0}
+        )
+        
+        for profile in participant_plans:
+            if profile.get("outing_history"):
+                for outing in profile["outing_history"]:
+                    # Check if user is participant but not creator
+                    if (outing.get("creator_user_id") != user_id and 
+                        any(p.get("user_id") == user_id for p in outing.get("participants", []))):
+                        plans.append(outing)
+        
+        logger.info(f"Retrieved {len(plans)} plans for user: {user_id}")
+        return jsonify({
+            "user_id": user_id,
+            "plans": plans,
+            "total": len(plans)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error retrieving user plans: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/plans/<plan_id>/participants', methods=['POST'])
+def add_participants_to_plan(plan_id):
+    """Add participants to an existing plan"""
+    try:
+        data = request.get_json()
+        new_participants_data = data.get('participants', [])
+        
+        if not new_participants_data:
+            logger.warning("No participants provided")
+            return jsonify({"error": "participants are required"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Find the plan in outing history
+        plan_profile = profiles_collection.find_one(
+            {"outing_history.plan_id": plan_id},
+            {"outing_history.$": 1, "_id": 0}
+        )
+        
+        if not plan_profile or not plan_profile.get("outing_history"):
+            logger.warning(f"Plan not found: {plan_id}")
+            return jsonify({"error": "Plan not found"}), 404
+        
+        existing_plan = plan_profile["outing_history"][0]
+        creator_user_id = existing_plan.get("creator_user_id")
+        
+        # Create new participants
+        new_participants = []
+        for p_data in new_participants_data:
+            participant = {
+                "user_id": p_data['user_id'],
+                "email": p_data['email'],
+                "name": p_data['name'],
+                "status": p_data.get('status', 'pending'),
+                "invited_at": datetime.utcnow().isoformat(),
+                "confirmed_at": None
+            }
+            new_participants.append(participant)
+        
+        # Update the plan with new participants
+        result = profiles_collection.update_one(
+            {"outing_history.plan_id": plan_id},
+            {
+                "$push": {"outing_history.$.participants": {"$each": new_participants}},
+                "$set": {
+                    "outing_history.$.is_group_outing": True,
+                    "outing_history.$.group_size": existing_plan.get('group_size', 1) + len(new_participants)
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"Added {len(new_participants)} participants to plan: {plan_id}")
+            return jsonify({
+                "message": f"Added {len(new_participants)} participants successfully",
+                "plan_id": plan_id,
+                "participants_added": len(new_participants)
+            }), 200
+        else:
+            logger.warning(f"Failed to add participants to plan: {plan_id}")
+            return jsonify({"error": "Failed to add participants"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error adding participants: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/plans/<plan_id>/participants/<user_id>/respond', methods=['PUT'])
+def respond_to_plan_invitation(plan_id, user_id):
+    """Allow participants to confirm or decline plan invitation"""
+    try:
+        data = request.get_json()
+        response_status = data.get('status')  # "confirmed" or "declined"
+        
+        if response_status not in ["confirmed", "declined"]:
+            logger.warning(f"Invalid response status: {response_status}")
+            return jsonify({"error": "status must be 'confirmed' or 'declined'"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Update participant status in the plan
+        update_data = {
+            f"outing_history.$.participants.$.status": response_status
+        }
+        
+        if response_status == "confirmed":
+            update_data[f"outing_history.$.participants.$.confirmed_at"] = datetime.utcnow().isoformat()
+        
+        result = profiles_collection.update_one(
+            {
+                "outing_history.plan_id": plan_id,
+                "outing_history.participants.user_id": user_id
+            },
+            {"$set": update_data}
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"User {user_id} {response_status} invitation for plan {plan_id}")
+            return jsonify({
+                "message": f"Response recorded: {response_status}",
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "status": response_status
+            }), 200
+        else:
+            logger.warning(f"Participant not found in plan: {plan_id}, user: {user_id}")
+            return jsonify({"error": "Participant not found in plan"}), 404
+            
+    except Exception as e:
+        logger.error(f"Error responding to invitation: {e}")
         return jsonify({"error": str(e)}), 500 

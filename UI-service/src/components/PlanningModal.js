@@ -264,7 +264,7 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
   const handlePlanSelection = async (selectedPlan) => {
     try {
       // Save the chosen plan to the outing profile service
-      const outingData = outingProfileService.formatOutingData(selectedPlan, formData, currentUser?.id);
+      const outingData = outingProfileService.formatOutingData(selectedPlan, formData, currentUser?.id, currentUser);
       await outingProfileService.addOutingToHistory(outingData);
       
       // Show success message (you can add a toast notification here later)
