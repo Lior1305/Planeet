@@ -167,6 +167,61 @@ class PlanningService {
     date.setMilliseconds(0);
     return date.toTimeString().slice(0, 5);
   }
+
+  async inviteParticipants(planId, participantEmails) {
+    try {
+      const response = await fetch(`${configService.getPlanningServiceUrl()}/v1/plans/${planId}/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          participant_emails: participantEmails
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Planning service error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Participants invited successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error inviting participants:', error);
+      throw error;
+    }
+  }
+
+  async respondToPlanInvitation(planId, userId, status) {
+    try {
+      const response = await fetch(`${configService.getPlanningServiceUrl()}/v1/plans/${planId}/respond`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          status: status
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Planning service error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Plan invitation response sent successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error responding to plan invitation:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export planning service instance

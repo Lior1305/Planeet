@@ -514,10 +514,6 @@ async def invite_participants(plan_id: str, invitation_request: PlanInvitationRe
         if not plan_data:
             raise HTTPException(status_code=404, detail="Plan not found. Please select a plan first.")
         
-        original_request = plan_requests_store.get(plan_id)
-        if not original_request:
-            raise HTTPException(status_code=404, detail="Original plan request not found")
-        
         creator_user_id = plan_data.get("creator_user_id")
         selected_plan = plan_data.get("selected_plan", {})
         current_participants = plan_data.get("participants", [])
@@ -536,6 +532,11 @@ async def invite_participants(plan_id: str, invitation_request: PlanInvitationRe
             user_info = await user_service_client.get_user_by_email(email)
             
             if user_info:
+                # Check if this is the creator trying to invite themselves
+                if user_info["id"] == creator_user_id:
+                    logger.warning(f"Creator {email} cannot invite themselves")
+                    continue
+                
                 new_participant = {
                     "user_id": user_info["id"],
                     "email": email,
@@ -550,24 +551,22 @@ async def invite_participants(plan_id: str, invitation_request: PlanInvitationRe
                 logger.warning(f"User not found for email: {email}")
                 raise HTTPException(status_code=404, detail=f"User not found for email: {email}")
         
-        # Add plan to each new participant's outing history
+        # Add plan to each NEW participant's outing history (excluding creator)
         for participant in new_participants:
             try:
-                plan_date = original_request["date"]
-                if isinstance(plan_date, str):
-                    plan_datetime = datetime.fromisoformat(plan_date)
-                else:
-                    plan_datetime = plan_date
+                # Extract plan details from the stored plan data
+                plan_date = plan_data.get("outing_date")
+                plan_time = plan_data.get("outing_time")
                 
                 outing_data = {
                     "user_id": participant["user_id"],
                     "plan_id": plan_id,
-                    "plan_name": f"Group Outing - {selected_plan.get('name', 'Unknown')}",
-                    "outing_date": plan_datetime.isoformat(),
-                    "outing_time": plan_datetime.strftime("%H:%M"),
-                    "group_size": len(current_participants),
-                    "city": original_request.get("location", {}).get("city", "Unknown"),
-                    "venue_types": [vt.value if hasattr(vt, 'value') else str(vt) for vt in original_request["venue_types"]],
+                    "plan_name": plan_data.get("plan_name", "Group Outing"),
+                    "outing_date": plan_date,
+                    "outing_time": plan_time,
+                    "group_size": plan_data.get("group_size", len(current_participants)),
+                    "city": plan_data.get("city", "Unknown"),
+                    "venue_types": plan_data.get("venue_types", []),
                     "selected_plan": selected_plan,
                     "participants": current_participants,
                     "creator_user_id": creator_user_id,
@@ -582,32 +581,10 @@ async def invite_participants(plan_id: str, invitation_request: PlanInvitationRe
             except Exception as e:
                 logger.error(f"Failed to add outing to history for user {participant['user_id']}: {e}")
         
-        # Update the creator's outing history to reflect the group nature
+        # Update the creator's existing plan to reflect the new participants
         try:
-            plan_date = original_request["date"]
-            if isinstance(plan_date, str):
-                plan_datetime = datetime.fromisoformat(plan_date)
-            else:
-                plan_datetime = plan_date
-            
-            outing_data = {
-                "user_id": creator_user_id,
-                "plan_id": plan_id,
-                "plan_name": f"Group Outing - {selected_plan.get('name', 'Unknown')}",
-                "outing_date": plan_datetime.isoformat(),
-                "outing_time": plan_datetime.strftime("%H:%M"),
-                "group_size": len(current_participants),
-                "city": original_request.get("location", {}).get("city", "Unknown"),
-                "venue_types": [vt.value if hasattr(vt, 'value') else str(vt) for vt in original_request["venue_types"]],
-                "selected_plan": selected_plan,
-                "participants": current_participants,
-                "creator_user_id": creator_user_id,
-                "is_group_outing": True,
-                "confirmed": True  # Creator remains confirmed
-            }
-            
-            # Add updated group outing to creator's history
-            await outing_profile_client.add_outing_history(outing_data)
+            # Update the existing plan in the creator's outing history with new participants
+            await outing_profile_client.add_participants_to_plan(plan_id, new_participants)
             logger.info(f"Updated creator's outing history to group outing")
             
         except Exception as e:

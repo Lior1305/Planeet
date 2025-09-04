@@ -2007,3 +2007,117 @@ code {
     font-size: 1rem;
   }
 }
+
+/* Outing Tags */
+.outing-tags {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tag-creator {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.tag-invited {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.outing-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Invite Modal */
+.invite-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.plan-info {
+  background-color: var(--background-alt);
+  padding: 16px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+
+.plan-info h3 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.plan-info p {
+  margin: 4px 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.help-text {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-weight: normal;
+  margin-top: 2px;
+}
+
+.slots-info {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius);
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.slots-info p {
+  margin: 0;
+  color: #0369a1;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Enhanced button styles for invite actions */
+.btn-success {
+  background-color: var(--accent-2);
+  color: white;
+  border: 1px solid var(--accent-2);
+}
+
+.btn-success:hover {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+.btn-success:disabled {
+  background-color: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments for tags */
+@media (max-width: 768px) {
+  .outing-tags {
+    flex-wrap: wrap;
+  }
+  
+  .tag {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+}
