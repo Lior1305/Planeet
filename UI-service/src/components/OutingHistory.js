@@ -228,9 +228,9 @@ const OutingHistory = () => {
     return outing.creator_user_id === currentUser.id;
   };
 
-  // Helper function to determine if user is invited (not creator and not confirmed)
+  // Helper function to determine if user is invited (not creator)
   const isInvited = (outing) => {
-    return !isCreator(outing) && !outing.confirmed;
+    return !isCreator(outing);
   };
 
   // Helper function to get creator name for invited plans
@@ -240,6 +240,45 @@ const OutingHistory = () => {
     // Try to find creator in participants array
     const creator = outing.participants?.find(p => p.user_id === outing.creator_user_id);
     return creator?.name || 'Unknown';
+  };
+
+  // Helper function to get participant status icon
+  const getParticipantStatusIcon = (participant) => {
+    switch (participant.status) {
+      case 'confirmed':
+        return '✅';
+      case 'declined':
+        return '❌';
+      case 'pending':
+      default:
+        return '⏳';
+    }
+  };
+
+  // Helper function to render participants list
+  const renderParticipantsList = (outing) => {
+    if (!outing.participants || outing.participants.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="participants-list">
+        <h4 className="participants-title">Participants ({outing.participants.length}/{outing.group_size})</h4>
+        <div className="participants-grid">
+          {outing.participants.map((participant, index) => (
+            <div key={participant.user_id || index} className="participant-item">
+              <span className="participant-status-icon">
+                {getParticipantStatusIcon(participant)}
+              </span>
+              <span className="participant-name">{participant.name}</span>
+              {participant.user_id === currentUser.id && (
+                <span className="participant-you">(You)</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   if (!currentUser) {
@@ -335,17 +374,30 @@ const OutingHistory = () => {
                     </div>
                     
                     {renderVenueDetails(outing)}
+                    {renderParticipantsList(outing)}
                   </div>
 
                   <div className="outing-actions">
                     {isCreator(outing) && outing.is_group_outing && (
-                      <button
-                        onClick={() => handleInviteParticipants(outing)}
-                        className="btn btn-primary btn-sm"
-                        title="Invite more participants"
-                      >
-                        📧 Invite
-                      </button>
+                      <>
+                        {outing.participants && outing.participants.length < outing.group_size ? (
+                          <button
+                            onClick={() => handleInviteParticipants(outing)}
+                            className="btn btn-primary btn-sm"
+                            title="Invite more participants"
+                          >
+                            📧 Invite
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-primary btn-sm disabled"
+                            title="Maximum participants reached"
+                            disabled
+                          >
+                            📧 Invite (Full)
+                          </button>
+                        )}
+                      </>
                     )}
                     
                     {isInvited(outing) && (
