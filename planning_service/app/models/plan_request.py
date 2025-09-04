@@ -153,8 +153,30 @@ class PlanResponse(BaseModel):
     status: str = Field("completed", description="Plan generation status")
     message: Optional[str] = Field(None, description="Additional information or warnings")
 
+class PlanSelectionRequest(BaseModel):
+    """Request to confirm a plan selection for the creator only"""
+    plan_id: str = Field(..., description="Plan identifier")
+    selected_plan_index: int = Field(..., ge=0, le=2, description="Index of selected plan (0-2)")
+
+class PlanInvitationRequest(BaseModel):
+    """Request to invite participants to an already confirmed plan"""
+    participant_emails: List[str] = Field(..., min_length=1, description="List of email addresses to invite")
+    
+    @field_validator('participant_emails')
+    @classmethod
+    def validate_emails(cls, v: List[str]) -> List[str]:
+        """Validate email addresses"""
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        
+        for email in v:
+            if not re.match(email_pattern, email):
+                raise ValueError(f"Invalid email address: {email}")
+        
+        return v
+
 class PlanConfirmationRequest(BaseModel):
-    """Request to confirm a plan and optionally add participants"""
+    """Request to confirm a plan and optionally add participants (backward compatibility)"""
     plan_id: str = Field(..., description="Plan identifier")
     selected_plan_index: int = Field(..., ge=0, le=2, description="Index of selected plan (0-2)")
     participant_emails: List[str] = Field(default=[], description="List of email addresses to invite")
@@ -171,4 +193,6 @@ class PlanConfirmationRequest(BaseModel):
                 raise ValueError(f"Invalid email address: {email}")
         
         # Remove duplicates while preserving order
-        return list(dict.fromkeys(v)) 
+        return list(dict.fromkeys(v))
+
+ 
