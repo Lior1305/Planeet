@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
         - name: planning-service
-          image: dartoledano/planning-service:v4.7.5
+          image: dartoledano/planning-service:v4.8.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8001
@@ -270,7 +270,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v4.2.2
+          image: dartoledano/venues-service:v4.3.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -324,7 +324,7 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v2.1.6
+          image: liorberlin/booking-service:v2.1.7
           imagePullPolicy: Always
           ports:
             - containerPort: 8004  # container listens on 8004
