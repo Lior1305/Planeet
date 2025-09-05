@@ -342,7 +342,7 @@ const OutingHistory = () => {
   return (
     <div className="outing-history-container">
       <div className="outing-history-header">
-        <h2>My Outing History</h2>
+        <h2>My Outings</h2>
         <div className="tab-navigation">
           <button
             className={`tab-button ${activeTab === 'future' ? 'active' : ''}`}
