@@ -121,7 +121,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.55
+          image: nikaklimenchuk/planeet-ui:react-v1.9.59
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -324,7 +324,7 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v2.1.7
+          image: liorberlin/booking-service:v2.1.9
           imagePullPolicy: Always
           ports:
             - containerPort: 8004  # container listens on 8004

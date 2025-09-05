@@ -3,6 +3,7 @@ import planningService from '../services/planningService.js';
 import userService from '../services/userService.js';
 import outingProfileService from '../services/outingProfileService.js';
 import GeneratedPlansModal from './GeneratedPlansModal.js';
+import BookingConfirmationModal from './BookingConfirmationModal.js';
 import CustomTimePicker from './CustomTimePicker.js';
 
 const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
@@ -13,6 +14,8 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
   const [cities, setCities] = useState([]);
   const [generatedPlans, setGeneratedPlans] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
+  const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const [loadingStep, setLoadingStep] = useState(0);
   const [countries] = useState(planningService.getAllCountries());
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -261,24 +264,37 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
     }
   };
 
-  const handlePlanSelection = async (selectedPlan) => {
+  const handlePlanSelection = async (plan) => {
+    try {
+      // Store the selected plan and show booking confirmation modal
+      setSelectedPlan(plan);
+      setShowPlans(false);
+      setShowBookingConfirmation(true);
+    } catch (error) {
+      console.error('Error selecting plan:', error);
+      setError('Failed to select plan. Please try again.');
+    }
+  };
+
+  const handleBookingComplete = async (plan, bookingResults) => {
     try {
       // Save the chosen plan to the outing profile service
-      const outingData = outingProfileService.formatOutingData(selectedPlan, formData, currentUser?.id, currentUser);
+      const outingData = outingProfileService.formatOutingData(plan, formData, currentUser?.id, currentUser);
       await outingProfileService.addOutingToHistory(outingData);
       
       // Show success message (you can add a toast notification here later)
       console.log('Plan saved to outing history successfully!');
+      console.log('Booking results:', bookingResults);
       
       // Close modal and notify parent with the selected plan
+      setShowBookingConfirmation(false);
       onClose();
       if (onPlanCreated) {
-        onPlanCreated(selectedPlan);
+        onPlanCreated(plan);
       }
     } catch (error) {
       console.error('Error saving plan to outing history:', error);
-      // You can add error handling here (show error message to user)
-      setError('Failed to save plan to history. Please try again.');
+      setError('Failed to save plan. Please try again.');
     }
   };
 
@@ -735,6 +751,20 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
           onClose={() => {
             setShowPlans(false);
             setGeneratedPlans(null);
+          }}
+        />
+      )}
+
+      {/* Booking Confirmation Modal */}
+      {showBookingConfirmation && selectedPlan && (
+        <BookingConfirmationModal
+          selectedPlan={selectedPlan}
+          formData={formData}
+          currentUser={currentUser}
+          onBookingComplete={handleBookingComplete}
+          onClose={() => {
+            setShowBookingConfirmation(false);
+            setSelectedPlan(null);
           }}
         />
       )}

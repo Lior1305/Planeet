@@ -226,13 +226,14 @@ class BookingService:
             if not overlapping_slots:
                 return {"error": "No overlapping time slots found for the requested time"}
             
-            # Check if all overlapping slots have availability
-            if not all(slot["counter"] > 0 for slot in overlapping_slots):
-                return {"error": "One or more overlapping time slots are fully booked"}
+            # Check if all overlapping slots have availability for the group size
+            group_size = getattr(request, 'group_size', 1)
+            if not all(slot["counter"] >= group_size for slot in overlapping_slots):
+                return {"error": f"Not enough availability for group size {group_size}"}
             
-            # Decrement availability for all overlapping slots
+            # Decrement availability for all overlapping slots based on group size
             for slot in overlapping_slots:
-                slot["counter"] -= 1
+                slot["counter"] -= group_size
             
             # Update the venue in the database
             result = await venues_collection.update_one(
@@ -300,13 +301,14 @@ class BookingService:
             if not overlapping_slots:
                 return {"error": "No overlapping time slots found for the requested time"}
             
-            # Check if all overlapping slots have availability
-            if not all(slot["counter"] > 0 for slot in overlapping_slots):
-                return {"error": "One or more overlapping time slots are fully booked"}
+            # Check if all overlapping slots have availability for the group size
+            group_size = getattr(request, 'group_size', 1)
+            if not all(slot["counter"] >= group_size for slot in overlapping_slots):
+                return {"error": f"Not enough availability for group size {group_size}"}
             
-            # Decrement availability for all overlapping slots
+            # Decrement availability for all overlapping slots based on group size
             for slot in overlapping_slots:
-                slot["counter"] -= 1
+                slot["counter"] -= group_size
             
             # Update the venue in the database
             result = await venues_collection.update_one(

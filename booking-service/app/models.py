@@ -20,6 +20,7 @@ class BookingRequest(BaseModel):
     google_place_id: str = Field(..., description="Google Place ID of the venue to book")
     time_slot: str = Field(..., description="Time slot to book in format HH:MM-HH:MM")
     user_id: str = Field(..., description="ID of the user making the booking")
+    group_size: int = Field(default=1, description="Number of people in the group")
 
 class BookingResponse(BaseModel):
     booking_id: str
