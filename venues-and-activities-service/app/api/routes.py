@@ -31,66 +31,6 @@ from ..db import get_venues_collection  # ✅ Use relative import
 from app.services.venue_discovery import venue_discovery
 
 # Add this function after the imports and before the other functions
-async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
-    """
-    Generate time slots for a venue by calling the booking service
-    """
-    try:
-        # Get the booking service URL from environment or use the correct internal service name
-        booking_service_url = os.getenv("BOOKING_SERVICE_URL", "http://booking-service:8004")
-        
-        logger.info(f"🔗 Calling booking service at: {booking_service_url}")
-        
-        # First, check if the booking service is healthy
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as health_client:
-                health_response = await health_client.get(f"{booking_service_url}/health")
-                if health_response.status_code != 200:
-                    logger.warning(f"⚠️ Booking service health check failed: {health_response.status_code}")
-                    return False
-                logger.info(f"✅ Booking service is healthy")
-        except Exception as health_error:
-            logger.warning(f"⚠️ Health check failed: {health_error}")
-            # Continue anyway, the service might be starting up
-        
-        # Make HTTP request to booking service with better timeout configuration
-        async with httpx.AsyncClient(
-            timeout=httpx.Timeout(
-                connect=15.0,    # Connection timeout
-                read=60.0,       # Read timeout (longer for time slot generation)
-                write=15.0,      # Write timeout
-                pool=30.0        # Pool timeout
-            )
-        ) as client:
-            logger.info(f"📤 Sending time slot generation request for venue: {venue_name}")
-            
-            response = await client.post(
-                f"{booking_service_url}/generate-time-slots",   # ✅ FIXED
-                json={"venue_id": venue_id, "default_counter": 100},
-                 headers={"Content-Type": "application/json"}
-        )
-
-            
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"✅ Time slots generated for {venue_name}: {result.get('message', 'Success')}")
-                return True
-            else:
-                logger.error(f"❌ Failed to generate time slots for {venue_name}: {response.status_code} - {response.text}")
-                return False
-                
-    except httpx.TimeoutException as timeout_error:
-        logger.error(f"⏰ Timeout calling booking service for {venue_name}: {timeout_error}")
-        return False
-    except httpx.ConnectError as connect_error:
-        logger.error(f"🔌 Connection error to booking service for {venue_name}: {connect_error}")
-        return False
-    except Exception as e:
-        logger.error(f"❌ Error calling booking service for {venue_name}: {e}")
-        return False
-
-
-
 # --- generate_time_slots_for_venue ---
 async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
     """
@@ -145,7 +85,6 @@ async def generate_time_slots_for_venue(venue_id: str, venue_name: str) -> bool:
         logger.error(f"❌ Error calling booking service for {venue_name}: {e}")
         return False
 
-
 # --- debug_booking_service_connectivity ---
 async def debug_booking_service_connectivity():
     """
@@ -163,6 +102,88 @@ async def debug_booking_service_connectivity():
     except Exception as e:
         logger.error(f"❌ Health check failed: {e}")
         return False
+
+# --- filter_venues_by_availability ---
+async def filter_venues_by_availability(venues: List, requested_time: str, group_size: int) -> List:
+    """
+    Filter venues based on availability for the requested time and group size
+    Uses existing booking service overlap checking functionality
+    """
+    try:
+        if not venues:
+            return []
+        
+        # Get booking service URL
+        booking_service_url = os.getenv("BOOKING_SERVICE_URL", "http://booking-service:8004")
+        
+        # Create a time slot for overlap checking
+        # The booking service will handle finding overlapping slots automatically
+        time_slot = _create_time_slot_around_time(requested_time)
+        
+        available_venues = []
+        
+        # Check each venue individually using the existing overlap endpoint
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for venue in venues:
+                try:
+                    # Use the existing overlap checking endpoint
+                    response = await client.get(
+                        f"{booking_service_url}/v1/availability/google-place/{venue.id}/overlapping/{time_slot}"
+                    )
+                    
+                    if response.status_code == 200:
+                        availability_data = response.json()
+                        
+                        # Check if venue has enough capacity for the group size
+                        if (availability_data.get("available") and 
+                            availability_data.get("counter", 0) >= group_size):
+                            available_venues.append(venue)
+                            logger.debug(f"✅ {venue.name} available: {availability_data.get('counter')} slots for {time_slot}")
+                        else:
+                            logger.debug(f"❌ {venue.name} not available: {availability_data.get('counter', 0)} slots < {group_size} needed")
+                    else:
+                        logger.debug(f"❌ {venue.name} availability check failed: {response.status_code}")
+                        
+                except Exception as e:
+                    logger.debug(f"❌ Error checking {venue.name}: {e}")
+                    continue
+        
+        logger.info(f"🎯 Availability filter: {len(available_venues)}/{len(venues)} venues available for {requested_time} (group size: {group_size})")
+        return available_venues
+        
+    except Exception as e:
+        logger.error(f"❌ Error filtering venues by availability: {e}")
+        return venues  # Return all venues if filtering fails
+
+def _create_time_slot_around_time(requested_time: str) -> str:
+    """
+    Create a 2-hour time slot starting from the requested time for overlap checking
+    This creates a time slot from requested_time to requested_time + 2 hours
+    """
+    try:
+        from datetime import datetime, timedelta
+        
+        # Parse the requested time
+        requested_dt = datetime.strptime(requested_time, "%H:%M")
+        
+        # Create a 2-hour slot starting at the requested time
+        slot_start = requested_dt
+        slot_end = slot_start + timedelta(hours=2)
+        
+        # Handle midnight rollover
+        if slot_end.hour < slot_start.hour:  # Crossed midnight
+            slot_end = slot_end.replace(day=slot_end.day + 1)
+        
+        # Format the time slot
+        start_str = slot_start.strftime("%H:%M")
+        end_str = slot_end.strftime("%H:%M")
+        
+        return f"{start_str}-{end_str}"
+        
+    except Exception as e:
+        logger.error(f"Error creating time slot from {requested_time}: {e}")
+        # Fallback to a default slot
+        return "10:00-12:00"
 
 # Helper functions
 def get_venue_by_id(venue_id: str) -> Venue:
@@ -294,7 +315,8 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
     Discover venues from Google Places API based on request criteria.
     
     This endpoint handles venue discovery, saves venues to MongoDB,
-    and automatically generates time slots via the booking service.
+    automatically generates time slots via the booking service,
+    and filters venues based on availability for the requested time and group size.
     """
     try:
         # 🔍 DEBUG: Test booking service connectivity first
@@ -308,9 +330,12 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
         location = venue_request.location.dict()
         radius_km = venue_request.radius_km
         
-        logger.info(f"Starting venue discovery for types: {venue_types}")
+        # Extract availability filtering parameters (now required)
+        requested_time = venue_request.requested_time  # Format: "11:00"
+        group_size = venue_request.group_size
         
-
+        logger.info(f"Starting venue discovery for types: {venue_types}")
+        logger.info(f"🎯 Filtering venues for time: {requested_time}, group size: {group_size}")
         
         # Discover venues for each requested type
         venues_by_type = {}
@@ -321,16 +346,49 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
                 venue_type, location, radius_km, 10  # Get more venues for planning service to choose from
             )
             
-            # No personalization here - planning service will handle it
-            # Just return raw venue data for the planning service to process
+            # Store all discovered venues first (no availability filtering yet)
             venues_by_type[venue_type] = venues
-                
-            total_venues_found += len(venues_by_type[venue_type])
-            logger.info(f"Discovered {len(venues_by_type[venue_type])} venues for type {venue_type}")
+            total_venues_found += len(venues)
+            logger.info(f"Discovered {len(venues)} venues for type {venue_type}")
 
-        # Convert venues to dictionaries for JSON serialization
-        serialized_venues_by_type = {}
+        # Save discovered venues to MongoDB FIRST (time slots will be generated automatically)
+        all_venues_for_saving = []
+        for venues in venues_by_type.values():
+            for venue in venues:
+                venue_dict = {
+                    "id": venue.id,  # Google place_id
+                    "venue_name": venue.name,
+                    "venue_type": venue.venue_type.value,
+                    "opening_hours": venue.opening_hours if hasattr(venue, 'opening_hours') else {"open_at": "", "close_at": ""},
+                    "time_slots": []
+                }
+                all_venues_for_saving.append(venue_dict)
+
+        if all_venues_for_saving:
+            logger.info(f"Saving {len(all_venues_for_saving)} discovered venues to MongoDB...")
+            saved_venues = await save_discovered_venues_to_db(all_venues_for_saving)
+            logger.info(f"✅ Venue discovery and time slot generation completed for {len(saved_venues)} venues")
+
+        # NOW filter venues by availability AFTER time slots are generated
+        filtered_venues_by_type = {}
         for venue_type, venues in venues_by_type.items():
+            if venues:
+                logger.info(f"🔍 Checking availability for {len(venues)} {venue_type} venues...")
+                filtered_venues = await filter_venues_by_availability(venues, requested_time, group_size)
+                
+                # If no venues pass availability filter, return all venues (availability check might have failed)
+                if not filtered_venues and len(venues) > 0:
+                    logger.warning(f"⚠️ No {venue_type} venues passed availability filter, returning all {len(venues)} venues")
+                    filtered_venues_by_type[venue_type] = venues
+                else:
+                    filtered_venues_by_type[venue_type] = filtered_venues
+                    logger.info(f"✅ {len(filtered_venues)} {venue_type} venues available for {requested_time} (group size: {group_size})")
+            else:
+                filtered_venues_by_type[venue_type] = venues
+
+        # Convert filtered venues to dictionaries for JSON serialization
+        serialized_venues_by_type = {}
+        for venue_type, venues in filtered_venues_by_type.items():
             serialized_venues_by_type[venue_type] = [
                 {
                     "id": venue.id,
@@ -363,30 +421,12 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
 
         response = VenueDiscoveryResponse(
             venues_by_type=serialized_venues_by_type,
-            total_venues_found=total_venues_found,
+            total_venues_found=sum(len(venues) for venues in filtered_venues_by_type.values()),
             venue_types_requested=venue_types,
             location=venue_request.location,
             radius_km=radius_km,
             discovered_at=datetime.utcnow().isoformat()
         )
-
-        # Save discovered venues to MongoDB (time slots will be generated automatically)
-        all_venues_for_saving = []
-        for venues in venues_by_type.values():
-            for venue in venues:
-                venue_dict = {
-                    "id": venue.id,  # Google place_id
-                    "venue_name": venue.name,
-                    "venue_type": venue.venue_type.value,
-                    "opening_hours": venue.opening_hours if hasattr(venue, 'opening_hours') else {"open_at": "", "close_at": ""},
-                    "time_slots": []
-                }
-                all_venues_for_saving.append(venue_dict)
-
-        if all_venues_for_saving:
-            logger.info(f"Saving {len(all_venues_for_saving)} discovered venues to MongoDB...")
-            saved_venues = await save_discovered_venues_to_db(all_venues_for_saving)
-            logger.info(f"✅ Venue discovery and time slot generation completed for {len(saved_venues)} venues")
 
         return response
 

@@ -50,12 +50,28 @@ async def create_plan(plan_request: PlanRequest):
                 logger.warning(f"Failed to get user preferences: {e}. Continuing without personalization.")
         
         # Step 2: Discover venues from Venues Service
+        # Extract time from plan_request.date for availability filtering
+        requested_time = None
+        if plan_request.date:
+            try:
+                # Convert datetime to HH:MM format
+                if isinstance(plan_request.date, str):
+                    from datetime import datetime
+                    plan_date = datetime.fromisoformat(plan_request.date.replace('Z', '+00:00'))
+                else:
+                    plan_date = plan_request.date
+                requested_time = plan_date.strftime("%H:%M")
+            except Exception as e:
+                logger.warning(f"Could not extract time from date {plan_request.date}: {e}")
+        
         venue_request = {
             "venue_types": [vt.value for vt in plan_request.venue_types],
             "location": plan_request.location.dict(),
             "radius_km": plan_request.radius_km,
             "user_id": plan_request.user_id,
-            "use_personalization": plan_request.use_personalization
+            "use_personalization": plan_request.use_personalization,
+            "requested_time": requested_time,  # Add time for availability filtering
+            "group_size": plan_request.group_size  # Add group size for availability filtering
         }
         
         logger.info(f"Requesting venue discovery for types: {venue_request['venue_types']}")
