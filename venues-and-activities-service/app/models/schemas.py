@@ -51,6 +51,8 @@ class VenueDiscoveryRequest(BaseModel):
     venue_types: List[str] = Field(..., description="Types of venues to discover")
     location: Location = Field(..., description="Location for venue search")
     radius_km: float = Field(10.0, gt=0, le=100, description="Search radius in kilometers")
+    requested_time: str = Field(..., description="Requested time for availability check (format: HH:MM)")
+    group_size: int = Field(..., ge=1, description="Group size for availability check")
 
 
 class VenueDiscoveryResponse(BaseModel):
