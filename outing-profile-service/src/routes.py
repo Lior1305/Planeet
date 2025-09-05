@@ -737,10 +737,10 @@ def update_creator_plan_participants(plan_id):
                 "participants_added": 0
             }), 200
         
-        # Calculate new group size (total participants)
-        total_participants = len(existing_participants) + len(new_participants)
+        # Get the original group size to preserve it
+        original_group_size = creator_profile["outing_history"][plan_index].get('group_size', 2)
         
-        # Update the creator's plan with new participants
+        # Update the creator's plan with new participants (preserve original group size)
         result = profiles_collection.update_one(
             {
                 "user_id": creator_user_id,
@@ -750,7 +750,7 @@ def update_creator_plan_participants(plan_id):
                 "$push": {f"outing_history.{plan_index}.participants": {"$each": new_participants}},
                 "$set": {
                     f"outing_history.{plan_index}.is_group_outing": True,
-                    f"outing_history.{plan_index}.group_size": total_participants
+                    f"outing_history.{plan_index}.group_size": original_group_size  # Preserve original group size
                 }
             }
         )

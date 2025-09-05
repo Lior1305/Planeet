@@ -564,7 +564,7 @@ async def invite_participants(plan_id: str, invitation_request: PlanInvitationRe
                     "plan_name": plan_data.get("plan_name", "Group Outing"),
                     "outing_date": plan_date,
                     "outing_time": plan_time,
-                    "group_size": plan_data.get("group_size", len(current_participants)),
+                    "group_size": plan_data.get("group_size", 2),  # Preserve original group size
                     "city": plan_data.get("city", "Unknown"),
                     "venue_types": plan_data.get("venue_types", []),
                     "selected_plan": selected_plan,
@@ -601,7 +601,7 @@ async def invite_participants(plan_id: str, invitation_request: PlanInvitationRe
                 "plan_id": plan_id,
                 "creator_user_id": creator_user_id,
                 "participants": current_participants,
-                "group_size": len(current_participants),
+                "group_size": plan_data.get("group_size", 2),  # Preserve original group size
                 "is_group_outing": True
             }
         }
