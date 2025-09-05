@@ -221,6 +221,56 @@ class PlanningService {
       throw error;
     }
   }
+
+  async cancelPlanForEveryone(planId, creatorUserId) {
+    try {
+      const response = await fetch(`${configService.getPlanningServiceUrl()}/v1/plans/${planId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ creator_user_id: creatorUserId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Planning service error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Plan cancelled for everyone successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error cancelling plan for everyone:', error);
+      throw error;
+    }
+  }
+
+  async deletePlanForEveryone(planId, creatorUserId) {
+    try {
+      const response = await fetch(`${configService.getPlanningServiceUrl()}/v1/plans/${planId}/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ creator_user_id: creatorUserId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Planning service error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Plan deleted for everyone successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error deleting plan for everyone:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export planning service instance

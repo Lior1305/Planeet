@@ -488,6 +488,72 @@ class OutingProfileClient:
             logger.error(f"Unexpected error when responding to invitation: {e}")
             return False
 
+    async def cancel_plan_for_everyone(self, plan_id: str, creator_user_id: str) -> bool:
+        """
+        Cancel a plan for all participants (creator only)
+        
+        Args:
+            plan_id: The plan identifier
+            creator_user_id: The creator's user ID
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            response = await self.client.post(
+                f"{self.outing_profile_service_url}/plans/{plan_id}/cancel",
+                json={
+                    "creator_user_id": creator_user_id
+                }
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Plan {plan_id} cancelled for all participants")
+                return True
+            else:
+                logger.error(f"Failed to cancel plan for everyone: {response.status_code}")
+                return False
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when cancelling plan for everyone: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error when cancelling plan for everyone: {e}")
+            return False
+
+    async def delete_plan_for_everyone(self, plan_id: str, creator_user_id: str) -> bool:
+        """
+        Delete a plan for all participants (creator only)
+        
+        Args:
+            plan_id: The plan identifier
+            creator_user_id: The creator's user ID
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            response = await self.client.post(
+                f"{self.outing_profile_service_url}/plans/{plan_id}/delete",
+                json={
+                    "creator_user_id": creator_user_id
+                }
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Plan {plan_id} deleted for all participants")
+                return True
+            else:
+                logger.error(f"Failed to delete plan for everyone: {response.status_code}")
+                return False
+                
+        except httpx.RequestError as e:
+            logger.error(f"Request error when deleting plan for everyone: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error when deleting plan for everyone: {e}")
+            return False
+
     async def close(self):
         """Close the HTTP client"""
         await self.client.aclose()

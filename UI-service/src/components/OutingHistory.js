@@ -59,6 +59,28 @@ const OutingHistory = () => {
     }
   };
 
+  const cancelPlanForEveryone = async (planId) => {
+    try {
+      await planningService.cancelPlanForEveryone(planId, currentUser.id);
+      // Reload the history to reflect the change
+      await loadOutingHistory();
+    } catch (error) {
+      console.error('Error cancelling plan for everyone:', error);
+      setError('Failed to cancel plan for everyone. Please try again.');
+    }
+  };
+
+  const deletePlanForEveryone = async (planId) => {
+    try {
+      await planningService.deletePlanForEveryone(planId, currentUser.id);
+      // Reload the history to reflect the change
+      await loadOutingHistory();
+    } catch (error) {
+      console.error('Error deleting plan for everyone:', error);
+      setError('Failed to delete plan for everyone. Please try again.');
+    }
+  };
+
   const formatDate = (dateString) => {
     try {
       const date = new Date(dateString);
@@ -419,21 +441,22 @@ const OutingHistory = () => {
                     
                     {isCreator(outing) && (
                       <button
-                        onClick={() => updateOutingStatus(outing.plan_id, 'cancelled', currentUser.id)}
+                        onClick={() => cancelPlanForEveryone(outing.plan_id)}
                         className={`btn btn-danger btn-sm ${outing.status === 'cancelled' ? 'disabled' : ''}`}
                         disabled={outing.status === 'cancelled'}
+                        title={outing.status === 'cancelled' ? 'Already cancelled' : 'Cancel for everyone'}
                       >
-                        {outing.status === 'cancelled' ? 'Cancelled' : 'Cancel'}
+                        {outing.status === 'cancelled' ? 'Cancelled' : 'Cancel for All'}
                       </button>
                     )}
                     
-                    {outing.status === 'cancelled' && (
+                    {outing.status === 'cancelled' && isCreator(outing) && (
                       <button
-                        onClick={() => deleteOuting(outing.plan_id, currentUser.id)}
+                        onClick={() => deletePlanForEveryone(outing.plan_id)}
                         className="btn btn-outline btn-sm"
-                        title="Delete this cancelled outing"
+                        title="Delete this cancelled outing for everyone"
                       >
-                        Delete
+                        Delete for All
                       </button>
                     )}
                   </div>

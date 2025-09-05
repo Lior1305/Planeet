@@ -690,3 +690,79 @@ async def health_check():
             "users_service": "healthy" if user_service_healthy else "unhealthy"
         }
     }
+
+@router.post("/plans/{plan_id}/cancel", response_model=Dict[str, Any])
+async def cancel_plan_for_everyone(plan_id: str, cancel_request: Dict[str, Any]):
+    """
+    Cancel a plan for all participants (creator only)
+    This sets the status to 'cancelled' for all users involved in the plan
+    """
+    try:
+        creator_user_id = cancel_request.get("creator_user_id")
+        if not creator_user_id:
+            raise HTTPException(status_code=400, detail="creator_user_id is required")
+        
+        # Get the existing plan to verify creator
+        plan_data = await outing_profile_client.get_plan(plan_id)
+        if not plan_data:
+            raise HTTPException(status_code=404, detail="Plan not found")
+        
+        if plan_data.get("creator_user_id") != creator_user_id:
+            raise HTTPException(status_code=403, detail="Only the creator can cancel the plan")
+        
+        # Cancel the plan for all participants
+        success = await outing_profile_client.cancel_plan_for_everyone(plan_id, creator_user_id)
+        
+        if success:
+            logger.info(f"Plan {plan_id} cancelled for all participants by creator {creator_user_id}")
+            return {
+                "message": "Plan cancelled for all participants",
+                "plan_id": plan_id,
+                "status": "cancelled"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to cancel plan for all participants")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error cancelling plan for everyone: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to cancel plan: {str(e)}")
+
+@router.post("/plans/{plan_id}/delete", response_model=Dict[str, Any])
+async def delete_plan_for_everyone(plan_id: str, delete_request: Dict[str, Any]):
+    """
+    Delete a plan for all participants (creator only)
+    This removes the plan from all users' outing history
+    """
+    try:
+        creator_user_id = delete_request.get("creator_user_id")
+        if not creator_user_id:
+            raise HTTPException(status_code=400, detail="creator_user_id is required")
+        
+        # Get the existing plan to verify creator
+        plan_data = await outing_profile_client.get_plan(plan_id)
+        if not plan_data:
+            raise HTTPException(status_code=404, detail="Plan not found")
+        
+        if plan_data.get("creator_user_id") != creator_user_id:
+            raise HTTPException(status_code=403, detail="Only the creator can delete the plan")
+        
+        # Delete the plan for all participants
+        success = await outing_profile_client.delete_plan_for_everyone(plan_id, creator_user_id)
+        
+        if success:
+            logger.info(f"Plan {plan_id} deleted for all participants by creator {creator_user_id}")
+            return {
+                "message": "Plan deleted for all participants",
+                "plan_id": plan_id,
+                "status": "deleted"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete plan for all participants")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting plan for everyone: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete plan: {str(e)}")

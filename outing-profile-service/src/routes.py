@@ -820,4 +820,101 @@ def respond_to_plan_invitation(plan_id, user_id):
             
     except Exception as e:
         logger.error(f"Error responding to invitation: {e}")
-        return jsonify({"error": str(e)}), 500 
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/plans/<plan_id>/cancel', methods=['POST'])
+def cancel_plan_for_everyone(plan_id):
+    """Cancel a plan for all participants (creator only)"""
+    try:
+        data = request.get_json()
+        creator_user_id = data.get('creator_user_id')
+        
+        if not creator_user_id:
+            logger.warning("Creator user ID is required")
+            return jsonify({"error": "creator_user_id is required"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Find all profiles that have this plan in their outing history
+        profiles_with_plan = profiles_collection.find({
+            "outing_history.plan_id": plan_id
+        })
+        
+        if not profiles_with_plan:
+            logger.warning(f"No profiles found with plan {plan_id}")
+            return jsonify({"error": "Plan not found"}), 404
+        
+        # Update all profiles to set the plan status to 'cancelled'
+        result = profiles_collection.update_many(
+            {"outing_history.plan_id": plan_id},
+            {
+                "$set": {
+                    "outing_history.$[plan].status": "cancelled"
+                }
+            },
+            array_filters=[{"plan.plan_id": plan_id}]
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"Plan {plan_id} cancelled for {result.modified_count} profiles")
+            return jsonify({
+                "message": f"Plan cancelled for {result.modified_count} participants",
+                "plan_id": plan_id,
+                "status": "cancelled",
+                "affected_profiles": result.modified_count
+            }), 200
+        else:
+            logger.warning(f"No profiles were updated for plan {plan_id}")
+            return jsonify({"error": "Failed to cancel plan"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error cancelling plan for everyone: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@api.route('/plans/<plan_id>/delete', methods=['POST'])
+def delete_plan_for_everyone(plan_id):
+    """Delete a plan for all participants (creator only)"""
+    try:
+        data = request.get_json()
+        creator_user_id = data.get('creator_user_id')
+        
+        if not creator_user_id:
+            logger.warning("Creator user ID is required")
+            return jsonify({"error": "creator_user_id is required"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Find all profiles that have this plan in their outing history
+        profiles_with_plan = profiles_collection.find({
+            "outing_history.plan_id": plan_id
+        })
+        
+        if not profiles_with_plan:
+            logger.warning(f"No profiles found with plan {plan_id}")
+            return jsonify({"error": "Plan not found"}), 404
+        
+        # Remove the plan from all profiles' outing history
+        result = profiles_collection.update_many(
+            {"outing_history.plan_id": plan_id},
+            {
+                "$pull": {
+                    "outing_history": {"plan_id": plan_id}
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"Plan {plan_id} deleted from {result.modified_count} profiles")
+            return jsonify({
+                "message": f"Plan deleted for {result.modified_count} participants",
+                "plan_id": plan_id,
+                "status": "deleted",
+                "affected_profiles": result.modified_count
+            }), 200
+        else:
+            logger.warning(f"No profiles were updated for plan {plan_id}")
+            return jsonify({"error": "Failed to delete plan"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error deleting plan for everyone: {e}")
+        return jsonify({"error": "Internal server error"}), 500 
