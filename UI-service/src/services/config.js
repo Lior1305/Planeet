@@ -81,7 +81,8 @@ class ConfigService {
         planning: 'http://localhost:30001',
         users: 'http://localhost:30002',
         venues: 'http://localhost:30003',
-        outingProfile: 'http://localhost:30004'
+        outingProfile: 'http://localhost:30004',
+        booking: 'http://localhost:30006'
       };
     } else if (this.isKubernetes) {
       // Production Kubernetes with NodePort services - use UI service IP + NodePorts
@@ -91,7 +92,8 @@ class ConfigService {
         planning: `http://${hostname}/api/planning`,
         users: `http://${hostname}/api`,
         venues: `http://${hostname}/api/venues`,
-        outingProfile: `http://${hostname}/api/outing`
+        outingProfile: `http://${hostname}/api/outing`,
+        booking: `http://${hostname}/api/booking`
       };
     } else {
       // Local development
@@ -99,7 +101,8 @@ class ConfigService {
         planning: 'http://localhost:8001',
         users: 'http://localhost:8080',
         venues: 'http://localhost:8000',
-        outingProfile: 'http://localhost:5000'
+        outingProfile: 'http://localhost:5000',
+        booking: 'http://localhost:8004'
       };
     }
   }
@@ -132,6 +135,11 @@ class ConfigService {
   // Get outing profile service URL
   getOutingProfileServiceUrl() {
     return this.getServiceUrl('outingProfile');
+  }
+
+  // Get booking service URL
+  getBookingServiceUrl() {
+    return this.getServiceUrl('booking');
   }
 
   // Get current environment info

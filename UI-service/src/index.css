@@ -2256,3 +2256,150 @@ code {
     font-size: 0.8rem;
   }
 }
+
+/* Booking Confirmation Modal Styles */
+.booking-confirmation-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 800px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.booking-summary {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.booking-intro {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.venues-booking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.venue-booking-item {
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 16px;
+  background: white;
+  transition: box-shadow 0.2s ease;
+}
+
+.venue-booking-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.venue-booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.venue-info {
+  flex: 1;
+}
+
+.venue-info .venue-name {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.venue-info .venue-type {
+  margin: 0 0 4px 0;
+  color: #666;
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.venue-info .venue-address {
+  margin: 0;
+  color: #888;
+  font-size: 13px;
+}
+
+.venue-timing {
+  text-align: right;
+  min-width: 120px;
+}
+
+.venue-timing .time-slot {
+  display: block;
+  font-weight: 600;
+  color: #007bff;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.venue-timing .duration {
+  display: block;
+  color: #666;
+  font-size: 12px;
+}
+
+.venue-booking-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.booking-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.status-text {
+  font-weight: 500;
+  color: #333;
+}
+
+.booking-actions {
+  text-align: center;
+  margin: 30px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #007bff;
+}
+
+.booking-actions .btn-lg {
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.error-icon {
+  font-size: 16px;
+}
