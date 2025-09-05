@@ -196,8 +196,8 @@ def get_venue_by_id(venue_id: str) -> Venue:
         
         # If not found, try MongoDB ObjectId (for backward compatibility)
         if not venue_doc:
-            try:
-                venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
+    try:
+        venue_doc = venues_collection.find_one({"_id": ObjectId(venue_id)})
             except:
                 pass  # Invalid ObjectId format
         

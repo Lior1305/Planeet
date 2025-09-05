@@ -229,6 +229,10 @@ const OutingHistory = () => {
     try {
       await planningService.respondToPlanInvitation(planId, currentUser.id, 'confirmed');
       await loadOutingHistory();
+      // Refresh notification count in header
+      if (window.refreshNotificationCount) {
+        window.refreshNotificationCount();
+      }
     } catch (error) {
       console.error('Error confirming invitation:', error);
       setError('Failed to confirm invitation. Please try again.');
@@ -239,6 +243,10 @@ const OutingHistory = () => {
     try {
       await planningService.respondToPlanInvitation(planId, currentUser.id, 'declined');
       await loadOutingHistory();
+      // Refresh notification count in header
+      if (window.refreshNotificationCount) {
+        window.refreshNotificationCount();
+      }
     } catch (error) {
       console.error('Error declining invitation:', error);
       setError('Failed to decline invitation. Please try again.');
@@ -342,7 +350,7 @@ const OutingHistory = () => {
   return (
     <div className="outing-history-container">
       <div className="outing-history-header">
-        <h2>My Outing History</h2>
+        <h2>My Outings</h2>
         <div className="tab-navigation">
           <button
             className={`tab-button ${activeTab === 'future' ? 'active' : ''}`}
