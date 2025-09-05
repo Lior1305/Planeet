@@ -131,7 +131,7 @@ async def generate_venue_time_slots(request: TimeSlotGenerationRequest):
 @router.post("/generate-time-slots/{venue_id}")
 async def generate_time_slots_for_venue(
     venue_id: str, 
-    default_counter: int = 100
+    default_counter: int = 1000
 ):
     """
     Generate time slots for a specific venue by ID
