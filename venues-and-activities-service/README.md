@@ -45,6 +45,41 @@ A focused FastAPI service for venue discovery and management using Google Places
 - `GET /api/v1/venue-types` - Get all available venue types
 - `GET /api/v1/health` - Health check
 - `GET /api/v1/stats` - Service statistics
+- `POST /cleanup/manual` - **Manually trigger venues data cleanup**
+- `GET /cleanup/status` - **Get cleanup service status**
+
+## 🧹 **Automatic Data Cleanup**
+
+The service includes an automatic cleanup feature that deletes all data from the "venues" collection every 5 minutes. This ensures fresh data and prevents accumulation of stale venue information.
+
+### Cleanup Features
+
+- **Automatic Scheduling**: Runs every 5 minutes automatically
+- **Manual Trigger**: Use `/cleanup/manual` endpoint for immediate cleanup
+- **Status Monitoring**: Check `/cleanup/status` to see if cleanup is running
+- **Comprehensive Logging**: All cleanup activities are logged with timestamps
+- **Error Handling**: Robust error handling with retry mechanisms
+- **Graceful Shutdown**: Cleanup service stops gracefully when the application shuts down
+
+### Cleanup Service Configuration
+
+The cleanup service is configured in `app/services/cleanup_service.py` and can be customized:
+
+```python
+# Default configuration (5 minutes)
+cleanup_service = VenuesCleanupService(cleanup_interval_minutes=5)
+
+# Custom configuration (e.g., 10 minutes)
+cleanup_service = VenuesCleanupService(cleanup_interval_minutes=10)
+```
+
+### Testing Cleanup
+
+You can test the cleanup functionality by:
+
+1. **Manual Trigger**: Use the `/cleanup/manual` POST endpoint
+2. **Status Check**: Use the `/cleanup/status` GET endpoint to verify the service is running
+3. **Logs**: Monitor the application logs to see cleanup activities
 
 ## Data Models
 
