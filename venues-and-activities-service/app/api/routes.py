@@ -346,21 +346,49 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
                 venue_type, location, radius_km, 10  # Get more venues for planning service to choose from
             )
             
-            # Always filter venues by availability since requested_time is required
+            # Store all discovered venues first (no availability filtering yet)
+            venues_by_type[venue_type] = venues
+            total_venues_found += len(venues)
+            logger.info(f"Discovered {len(venues)} venues for type {venue_type}")
+
+        # Save discovered venues to MongoDB FIRST (time slots will be generated automatically)
+        all_venues_for_saving = []
+        for venues in venues_by_type.values():
+            for venue in venues:
+                venue_dict = {
+                    "id": venue.id,  # Google place_id
+                    "venue_name": venue.name,
+                    "venue_type": venue.venue_type.value,
+                    "opening_hours": venue.opening_hours if hasattr(venue, 'opening_hours') else {"open_at": "", "close_at": ""},
+                    "time_slots": []
+                }
+                all_venues_for_saving.append(venue_dict)
+
+        if all_venues_for_saving:
+            logger.info(f"Saving {len(all_venues_for_saving)} discovered venues to MongoDB...")
+            saved_venues = await save_discovered_venues_to_db(all_venues_for_saving)
+            logger.info(f"✅ Venue discovery and time slot generation completed for {len(saved_venues)} venues")
+
+        # NOW filter venues by availability AFTER time slots are generated
+        filtered_venues_by_type = {}
+        for venue_type, venues in venues_by_type.items():
             if venues:
                 logger.info(f"🔍 Checking availability for {len(venues)} {venue_type} venues...")
                 filtered_venues = await filter_venues_by_availability(venues, requested_time, group_size)
-                venues_by_type[venue_type] = filtered_venues
-                logger.info(f"✅ {len(filtered_venues)} {venue_type} venues available for {requested_time} (group size: {group_size})")
-            else:
-                venues_by_type[venue_type] = venues
                 
-            total_venues_found += len(venues_by_type[venue_type])
-            logger.info(f"Discovered {len(venues_by_type[venue_type])} venues for type {venue_type}")
+                # If no venues pass availability filter, return all venues (availability check might have failed)
+                if not filtered_venues and len(venues) > 0:
+                    logger.warning(f"⚠️ No {venue_type} venues passed availability filter, returning all {len(venues)} venues")
+                    filtered_venues_by_type[venue_type] = venues
+                else:
+                    filtered_venues_by_type[venue_type] = filtered_venues
+                    logger.info(f"✅ {len(filtered_venues)} {venue_type} venues available for {requested_time} (group size: {group_size})")
+            else:
+                filtered_venues_by_type[venue_type] = venues
 
-        # Convert venues to dictionaries for JSON serialization
+        # Convert filtered venues to dictionaries for JSON serialization
         serialized_venues_by_type = {}
-        for venue_type, venues in venues_by_type.items():
+        for venue_type, venues in filtered_venues_by_type.items():
             serialized_venues_by_type[venue_type] = [
                 {
                     "id": venue.id,
@@ -393,30 +421,12 @@ async def discover_venues(venue_request: VenueDiscoveryRequest):
 
         response = VenueDiscoveryResponse(
             venues_by_type=serialized_venues_by_type,
-            total_venues_found=total_venues_found,
+            total_venues_found=sum(len(venues) for venues in filtered_venues_by_type.values()),
             venue_types_requested=venue_types,
             location=venue_request.location,
             radius_km=radius_km,
             discovered_at=datetime.utcnow().isoformat()
         )
-
-        # Save discovered venues to MongoDB (time slots will be generated automatically)
-        all_venues_for_saving = []
-        for venues in venues_by_type.values():
-            for venue in venues:
-                venue_dict = {
-                    "id": venue.id,  # Google place_id
-                    "venue_name": venue.name,
-                    "venue_type": venue.venue_type.value,
-                    "opening_hours": venue.opening_hours if hasattr(venue, 'opening_hours') else {"open_at": "", "close_at": ""},
-                    "time_slots": []
-                }
-                all_venues_for_saving.append(venue_dict)
-
-        if all_venues_for_saving:
-            logger.info(f"Saving {len(all_venues_for_saving)} discovered venues to MongoDB...")
-            saved_venues = await save_discovered_venues_to_db(all_venues_for_saving)
-            logger.info(f"✅ Venue discovery and time slot generation completed for {len(saved_venues)} venues")
 
         return response
 
