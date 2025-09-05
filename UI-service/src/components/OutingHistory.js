@@ -229,6 +229,10 @@ const OutingHistory = () => {
     try {
       await planningService.respondToPlanInvitation(planId, currentUser.id, 'confirmed');
       await loadOutingHistory();
+      // Refresh notification count in header
+      if (window.refreshNotificationCount) {
+        window.refreshNotificationCount();
+      }
     } catch (error) {
       console.error('Error confirming invitation:', error);
       setError('Failed to confirm invitation. Please try again.');
@@ -239,6 +243,10 @@ const OutingHistory = () => {
     try {
       await planningService.respondToPlanInvitation(planId, currentUser.id, 'declined');
       await loadOutingHistory();
+      // Refresh notification count in header
+      if (window.refreshNotificationCount) {
+        window.refreshNotificationCount();
+      }
     } catch (error) {
       console.error('Error declining invitation:', error);
       setError('Failed to decline invitation. Please try again.');

@@ -917,4 +917,163 @@ def delete_plan_for_everyone(plan_id):
             
     except Exception as e:
         logger.error(f"Error deleting plan for everyone: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@api.route('/invitations/pending', methods=['GET'])
+def get_pending_invitations():
+    """Get pending invitations for a user"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            logger.warning("user_id is required")
+            return jsonify({"error": "user_id is required"}), 400
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Find all profiles that have this user as a pending participant
+        profiles_with_invitations = profiles_collection.find({
+            "outing_history.participants.user_id": user_id,
+            "outing_history.participants.status": "pending"
+        })
+        
+        pending_invitations = []
+        seen_plan_ids = set()  # Track seen plan IDs to avoid duplicates
+        
+        for profile in profiles_with_invitations:
+            outing_history = profile.get("outing_history", [])
+            
+            for outing in outing_history:
+                plan_id = outing.get("plan_id")
+                
+                # Skip if this user is the creator of this plan
+                if outing.get("creator_user_id") == user_id:
+                    continue
+                
+                # Skip if we've already processed this plan
+                if plan_id in seen_plan_ids:
+                    continue
+                    
+                participants = outing.get("participants", [])
+                for participant in participants:
+                    if participant.get("user_id") == user_id and participant.get("status") == "pending":
+                        # Mark this plan as seen
+                        seen_plan_ids.add(plan_id)
+                        
+                        # Find the creator's profile to get their name
+                        creator_user_id = outing.get("creator_user_id")
+                        creator_profile = profiles_collection.find_one({"user_id": creator_user_id})
+                        creator_name = creator_profile.get("name", "Unknown User") if creator_profile else "Unknown User"
+                        
+                        invitation = {
+                            "id": f"{plan_id}_{user_id}",
+                            "plan_id": plan_id,
+                            "plan_name": outing.get("plan_name", "Untitled Plan"),
+                            "inviter_name": creator_name,  # Show creator's name as inviter
+                            "inviter_id": creator_user_id,  # Creator's user ID
+                            "invited_at": participant.get("invited_at"),
+                            "status": participant.get("status"),
+                            "plan_date": outing.get("outing_date"),  # Fixed: was plan_date, should be outing_date
+                            "venue_types": outing.get("venue_types", [])
+                        }
+                        pending_invitations.append(invitation)
+                        break  # Found the invitation for this plan, move to next plan
+        
+        logger.info(f"Found {len(pending_invitations)} pending invitations for user {user_id}")
+        logger.info(f"Debug - Profiles found: {profiles_collection.count_documents({'outing_history.participants.user_id': user_id, 'outing_history.participants.status': 'pending'})}")
+        return jsonify(pending_invitations), 200
+        
+    except Exception as e:
+        logger.error(f"Error retrieving pending invitations: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@api.route('/invitations/<invitation_id>/accept', methods=['PUT'])
+def accept_invitation(invitation_id):
+    """Accept an invitation"""
+    try:
+        # Parse invitation_id (format: plan_id_user_id)
+        parts = invitation_id.split('_')
+        if len(parts) != 2:
+            return jsonify({"error": "Invalid invitation ID format"}), 400
+        
+        plan_id, user_id = parts
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Update the participant status to confirmed
+        array_filters = [
+            {"plan.plan_id": plan_id},
+            {"participant.user_id": user_id}
+        ]
+        
+        update_data = {
+            "outing_history.$[plan].participants.$[participant].status": "confirmed",
+            "outing_history.$[plan].participants.$[participant].confirmed_at": datetime.utcnow().isoformat()
+        }
+        
+        result = profiles_collection.update_many(
+            {"outing_history.plan_id": plan_id},
+            {"$set": update_data},
+            array_filters=array_filters
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"User {user_id} accepted invitation for plan {plan_id}")
+            return jsonify({
+                "message": "Invitation accepted successfully",
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "status": "confirmed"
+            }), 200
+        else:
+            logger.warning(f"No invitation found for user {user_id} in plan {plan_id}")
+            return jsonify({"error": "Invitation not found"}), 404
+            
+    except Exception as e:
+        logger.error(f"Error accepting invitation: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@api.route('/invitations/<invitation_id>/decline', methods=['PUT'])
+def decline_invitation(invitation_id):
+    """Decline an invitation"""
+    try:
+        # Parse invitation_id (format: plan_id_user_id)
+        parts = invitation_id.split('_')
+        if len(parts) != 2:
+            return jsonify({"error": "Invalid invitation ID format"}), 400
+        
+        plan_id, user_id = parts
+        
+        profiles_collection = db.get_profiles_collection()
+        
+        # Update the participant status to declined
+        array_filters = [
+            {"plan.plan_id": plan_id},
+            {"participant.user_id": user_id}
+        ]
+        
+        update_data = {
+            "outing_history.$[plan].participants.$[participant].status": "declined"
+        }
+        
+        result = profiles_collection.update_many(
+            {"outing_history.plan_id": plan_id},
+            {"$set": update_data},
+            array_filters=array_filters
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"User {user_id} declined invitation for plan {plan_id}")
+            return jsonify({
+                "message": "Invitation declined successfully",
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "status": "declined"
+            }), 200
+        else:
+            logger.warning(f"No invitation found for user {user_id} in plan {plan_id}")
+            return jsonify({"error": "Invitation not found"}), 404
+            
+    except Exception as e:
+        logger.error(f"Error declining invitation: {e}")
         return jsonify({"error": "Internal server error"}), 500 

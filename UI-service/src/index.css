@@ -2368,6 +2368,199 @@ code {
   font-size: 16px;
 }
 
+/* Notification System Styles */
+.notification-container {
+  position: relative;
+  margin-right: -8px;
+}
+
+.notification-bell {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: var(--transition);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-bell:hover {
+  background-color: var(--background-alt);
+}
+
+.notification-bell img {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) saturate(100%) invert(40%) sepia(8%) saturate(1270%) hue-rotate(201deg) brightness(95%) contrast(86%);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: var(--accent-3);
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 350px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  margin-top: 8px;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.refresh-btn, .close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.refresh-btn:hover, .close-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--background-alt);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.notification-content {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.loading, .no-invitations {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.invitations-list {
+  padding: 0;
+}
+
+.invitation-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  transition: var(--transition);
+}
+
+.invitation-item:hover {
+  background-color: var(--background-alt);
+}
+
+.invitation-item:last-child {
+  border-bottom: none;
+}
+
+.invitation-content {
+  margin-bottom: 12px;
+}
+
+.invitation-text {
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.invitation-date {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.invitation-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.notification-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+/* Responsive design for notifications */
+@media (max-width: 768px) {
+  .notification-dropdown {
+    width: 300px;
+    right: -50px;
+  }
+  
+  .notification-container {
+    margin-right: -4px;
+  }
+}
+
 .status-text {
   font-weight: 500;
   color: #333;
