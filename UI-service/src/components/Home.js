@@ -30,7 +30,7 @@ const Home = () => {
         <div className="container">
           <div className="hero-eyebrow">Plan together, fast</div>
           <h1>Create Amazing Outings Together</h1>
-          <p>Discover the best venues, plan with friends, and make memories that last. Our smart planning system helps you find the perfect spots for any occasion.</p>
+          <p>Discover the best venues, plan with friends, and make memories that last. Our comprehensive venue database helps you find the perfect spots for any occasion.</p>
           <button className="btn btn-primary" onClick={handleStartPlanning}>
             <span className="icon">🚀</span> Start Planning
           </button>
@@ -57,8 +57,8 @@ const Home = () => {
           </article>
           <article className="feature-card fc-3">
             <div className="fc-icon">🎯</div>
-            <h3>Smart matching</h3>
-            <p>Personalized venue suggestions based on your preferences, budget, and group size.</p>
+            <h3>Personalized matching</h3>
+            <p>Curated venue suggestions based on your preferences, budget, and group size.</p>
           </article>
           <article className="feature-card fc-4">
             <div className="fc-icon">❤️</div>
@@ -75,7 +75,7 @@ const Home = () => {
             <div className="stat-chips">
               <div className="stat-chip">500+ venues</div>
               <div className="stat-chip">Real-time status</div>
-              <div className="stat-chip">Smart AI</div>
+              <div className="stat-chip">Invite friends</div>
             </div>
             <div>
               <h2>Why choose Planeet?</h2>

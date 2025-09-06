@@ -105,7 +105,7 @@ const Login = () => {
         </div>
 
         {error && (
-          <div className="form-error" style={{ marginBottom: '16px' }}>
+          <div className="form-error">
             {error}
           </div>
         )}

@@ -11,8 +11,52 @@ const Register = () => {
     phone: ''
   });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const validateField = (name, value) => {
+    const errors = { ...fieldErrors };
+    
+    switch (name) {
+      case 'username':
+        if (value && value.length < 3) {
+          errors.username = 'Username must be at least 3 characters long.';
+        } else if (value && !/^[a-zA-Z0-9_]+$/.test(value)) {
+          errors.username = 'Username can only contain letters, numbers, and underscores.';
+        } else {
+          delete errors.username;
+        }
+        break;
+      case 'email':
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          errors.email = 'Please enter a valid email address.';
+        } else {
+          delete errors.email;
+        }
+        break;
+      case 'password':
+        if (value && value.length < 6) {
+          errors.password = 'Password must be at least 6 characters long.';
+        } else if (value && value.length > 50) {
+          errors.password = 'Password must be less than 50 characters.';
+        } else {
+          delete errors.password;
+        }
+        break;
+      case 'phone':
+        if (value && !/^05\d{8}$/.test(value)) {
+          errors.phone = 'Please enter a valid Israeli phone number (e.g., 05XXXXXXXX) or leave it empty.';
+        } else {
+          delete errors.phone;
+        }
+        break;
+      default:
+        break;
+    }
+    
+    setFieldErrors(errors);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -20,8 +64,12 @@ const Register = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
+    
+    // Clear general error when user starts typing
     if (error) setError('');
+    
+    // Validate the specific field
+    validateField(name, value);
   };
 
   const handleSubmit = async (e) => {
@@ -68,12 +116,17 @@ const Register = () => {
             type="text"
             id="username"
             name="username"
-            className="form-input"
+            className={`form-input ${fieldErrors.username ? 'error' : ''}`}
             value={formData.username}
             onChange={handleInputChange}
             required
             disabled={isLoading}
           />
+          {fieldErrors.username && (
+            <div className="field-error">
+              {fieldErrors.username}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -82,12 +135,17 @@ const Register = () => {
             type="email"
             id="email"
             name="email"
-            className="form-input"
+            className={`form-input ${fieldErrors.email ? 'error' : ''}`}
             value={formData.email}
             onChange={handleInputChange}
             required
             disabled={isLoading}
           />
+          {fieldErrors.email && (
+            <div className="field-error">
+              {fieldErrors.email}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -97,7 +155,7 @@ const Register = () => {
               type={showPassword ? "text" : "password"}
               id="password"
               name="password"
-              className="form-input"
+              className={`form-input ${fieldErrors.password ? 'error' : ''}`}
               value={formData.password}
               onChange={handleInputChange}
               required
@@ -118,6 +176,11 @@ const Register = () => {
               />
             </button>
           </div>
+          {fieldErrors.password && (
+            <div className="field-error">
+              {fieldErrors.password}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -126,7 +189,7 @@ const Register = () => {
             type="tel"
             id="phone"
             name="phone"
-            className="form-input"
+            className={`form-input ${fieldErrors.phone ? 'error' : ''}`}
             value={formData.phone}
             onChange={handleInputChange}
             placeholder="05XXXXXXXX"
@@ -135,10 +198,15 @@ const Register = () => {
           <small style={{ color: 'var(--text-light)', fontSize: '14px' }}>
             Israeli format: 05XXXXXXXX
           </small>
+          {fieldErrors.phone && (
+            <div className="field-error">
+              {fieldErrors.phone}
+            </div>
+          )}
         </div>
 
         {error && (
-          <div className="form-error" style={{ marginBottom: '16px' }}>
+          <div className="form-error">
             {error}
           </div>
         )}
