@@ -10,6 +10,7 @@ const Header = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const currentUser = userService.getCurrentUser();
 
   // Load notification count when user changes
@@ -41,6 +42,28 @@ const Header = () => {
     };
   }, [currentUser]);
 
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isMobileMenuOpen && !event.target.closest('.nav-menu') && !event.target.closest('.mobile-menu-toggle')) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      // Prevent body scroll when menu is open
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
   const handleNotificationClick = () => {
     setIsNotificationOpen(!isNotificationOpen);
   };
@@ -64,19 +87,40 @@ const Header = () => {
     window.location.reload();
   };
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <header className="header">
       <div className="container">
         <div className="header-content">
-          <Link to="/" className="logo">
+          <Link to="/" className="logo" onClick={closeMobileMenu}>
             <img src="/images/planeet-small.png" alt="Planeet" />
             <span className="logo-text">Planeet</span>
           </Link>
 
-          <nav className="nav-menu">
-            <Link to="/" className="nav-link">Home</Link>
-            <Link to="/plan" className="nav-link">Plan Outing</Link>
-            <Link to="/history" className="nav-link">My Outings</Link>
+          {/* Mobile menu button */}
+          <button 
+            className="mobile-menu-toggle"
+            onClick={toggleMobileMenu}
+            aria-label="Toggle mobile menu"
+          >
+            <span className={`hamburger ${isMobileMenuOpen ? 'active' : ''}`}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+          </button>
+
+          <nav className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+            <Link to="/" className="nav-link" onClick={closeMobileMenu}>Home</Link>
+            <Link to="/plan" className="nav-link" onClick={closeMobileMenu}>Plan Outing</Link>
+            <Link to="/history" className="nav-link" onClick={closeMobileMenu}>My Outings</Link>
           </nav>
 
           <div className="user-menu">

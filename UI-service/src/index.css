@@ -891,6 +891,54 @@ code {
   border: 1px solid var(--border);
 }
 
+/* Mobile menu toggle button */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  z-index: 1001;
+}
+
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  width: 24px;
+  height: 18px;
+  position: relative;
+}
+
+.hamburger span {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: var(--text-primary);
+  border-radius: 1px;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.hamburger span:nth-child(1) {
+  margin-bottom: 6px;
+}
+
+.hamburger span:nth-child(2) {
+  margin-bottom: 6px;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -6px);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .container {
@@ -917,8 +965,48 @@ code {
     gap: 40px;
   }
   
+  /* Mobile navigation styles */
+  .mobile-menu-toggle {
+    display: block;
+  }
+  
   .nav-menu {
-    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    padding: 80px 20px 20px;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .nav-menu.mobile-open {
+    transform: translateY(0);
+  }
+  
+  .nav-link {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    transition: var(--transition);
+  }
+  
+  .nav-link:hover {
+    background: var(--background-alt);
+    color: var(--primary);
+  }
+  
+  .user-menu {
+    gap: 12px;
   }
   
   .modal {
@@ -948,6 +1036,30 @@ code {
   .modal-body,
   .modal-actions {
     padding: 20px;
+  }
+  
+  /* Mobile navigation adjustments for very small screens */
+  .nav-menu {
+    padding: 70px 16px 16px;
+  }
+  
+  .nav-link {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+  
+  .user-menu {
+    gap: 8px;
+  }
+  
+  .user-info {
+    padding: 6px 12px;
+  }
+  
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
 }
 
