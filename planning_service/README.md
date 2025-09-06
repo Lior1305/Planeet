@@ -1,284 +1,64 @@
-# Planning Service
+# 🎯 Planning Service
 
-A FastAPI service that orchestrates outing planning by integrating with the **Outing-Profile-Service** for user preferences and the **Venues Service** to create comprehensive venue plans based on user requirements.
+Core service that orchestrates outing planning, venue discovery, and group coordination.
 
-## 🎯 **Service Flow**
+## 🎯 Purpose
 
-```
-User Input → Planning Service → Outing-Profile-Service (preferences) → Venues Service → Planning Service → Booking Service + UI
-```
+The Planning Service is the brain of Planeet, handling plan creation, venue recommendations, group invitations, and coordination between all other services.
 
-### **1. User Input**
-- User provides outing requirements (venue types, location, date, time, group size, budget)
-- Planning Service receives and validates the input
+## 🛠️ Tech Stack
 
-### **2. Preference Retrieval**
-- Planning Service fetches user preferences from **Outing-Profile-Service**
-- User preferences include venue types, price ranges, amenities, dietary restrictions, etc.
+- **Language**: Python
+- **Framework**: FastAPI
+- **Dependencies**: Multiple service integrations
+- **Container**: Docker
 
-### **3. Plan Generation**
-- Planning Service sends plan request to Venues Service (including user preferences)
-- Venues Service discovers venues, applies personalization, and generates comprehensive plan
-- Plan includes venue suggestions, costs, durations, travel routes, and links
+## 🚀 Quick Start
 
-### **4. Plan Delivery**
-- Venues Service returns complete plan to Planning Service
-- Planning Service stores plan and sends to Booking Service and UI
-- User receives complete outing plan with all venue details and links
-
-## 🏗️ **Architecture**
-
-### **Planning Service (Orchestrator)**
-- **Port**: 8001
-- **Role**: Receives user input, coordinates with other services, manages plan lifecycle
-- **Endpoints**: Plan creation, retrieval, status updates
-
-### **Outing-Profile-Service (User Data)**
-- **Port**: 8002
-- **Role**: Stores and manages user preferences, profiles, and outing history
-- **Data**: User preferences, dietary restrictions, accessibility needs, favorite venues
-
-### **Venues Service (Venue Discovery)**
-- **Port**: 8000
-- **Role**: Discovers venues, applies personalization, generates comprehensive plans
-- **Endpoints**: Plan generation, venue search, personalization
-
-## 📡 **API Endpoints**
-
-### **Plan Management**
-- `POST /v1/plans/create` - Create new outing plan
-- `GET /v1/plans/{plan_id}` - Get specific plan
-- `GET /v1/plans` - Get user's plans
-- `POST /v1/plans/{plan_id}/status` - Update plan status
-- `POST /v1/plans/{plan_id}/notify` - Receive plan notifications
-- `POST /v1/plans/{plan_id}/response` - Receive plan response from Venues Service
-
-### **User Preferences (from Outing-Profile-Service)**
-- `GET /v1/outing-preferences` - Get user preferences from Outing-Profile-Service
-- `GET /v1/outing-profile` - Get user profile from Outing-Profile-Service
-
-### **Health & Status**
-- `GET /v1/health` - Service health check
-
-## 🔄 **Integration Flow**
-
-### **1. Plan Creation Request**
-```json
-{
-  "user_id": "user123",
-  "venue_types": ["restaurant", "museum"],
-  "location": {
-    "latitude": 40.7589,
-    "longitude": -73.9851,
-    "city": "New York"
-  },
-  "date": "2024-01-15T18:00:00",
-  "group_size": 4,
-  "budget_range": "$$",
-  "use_personalization": true,
-  "max_venues": 3
-}
-```
-
-### **2. Preference Retrieval**
-Planning Service fetches user preferences from Outing-Profile-Service:
-```json
-{
-  "user_id": "user123",
-  "preferred_venue_types": ["restaurant", "cafe", "museum"],
-  "preferred_price_range": "$$",
-  "preferred_amenities": ["wifi", "outdoor_seating"],
-  "dietary_restrictions": ["vegetarian"],
-  "accessibility_needs": ["wheelchair_accessible"]
-}
-```
-
-### **3. Venues Service Response**
-```json
-{
-  "plan_id": "plan_uuid",
-  "user_id": "user123",
-  "suggested_venues": [
-    {
-      "venue_id": "venue1",
-      "name": "Central Park Restaurant",
-      "venue_type": "restaurant",
-      "rating": 4.5,
-      "price_range": "$$",
-      "personalization_score": 0.92,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://centralparkrestaurant.com",
-          "title": "Official Website"
-        },
-        {
-          "type": "booking",
-          "url": "https://opentable.com/central-park",
-          "title": "Make Reservation"
-        }
-      ]
-    }
-  ],
-  "estimated_total_duration": 4.5,
-  "travel_route": [...],
-  "personalization_applied": true,
-  "average_personalization_score": 0.85
-}
-```
-
-## 🚀 **Getting Started**
-
-### **1. Install Dependencies**
 ```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Run the service
+python app/main.py
 ```
 
-### **2. Run the Service**
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
-```
+## 📡 API Endpoints
 
-### **3. Service Configuration**
-Set service URLs in the respective client files:
+- `POST /v1/plans/create` - Create new outing plan
+- `GET /v1/plans/{plan_id}` - Get plan details
+- `POST /v1/plans/{plan_id}/invite` - Invite participants
+- `PUT /v1/plans/{plan_id}/respond` - Respond to invitation
+- `GET /v1/countries` - Get available countries
+- `GET /v1/cities` - Get available cities
 
-**Outing-Profile-Service URL** (in `app/services/outing_profile_client.py`):
-```python
-outing_profile_service_url = "http://localhost:8002"  # Default
-```
+## 🔗 Service Integrations
 
-**Venues Service URL** (in `app/services/venues_service_client.py`):
-```python
-venues_service_url = "http://localhost:8000"  # Default
-```
+- **Venues Service**: Fetches venue recommendations
+- **Users Service**: Validates user data and permissions
+- **Booking Service**: Handles venue reservations
+- **Outing Profile Service**: Saves completed outings
+- **UI Service**: Provides planning interface
 
-## 🔧 **Configuration**
+## 📝 Key Features
 
-### **Environment Variables**
-- `OUTING_PROFILE_SERVICE_URL`: URL of the Outing-Profile-Service (default: http://localhost:8002)
-- `VENUES_SERVICE_URL`: URL of the Venues Service (default: http://localhost:8000)
-- `PLANNING_SERVICE_PORT`: Port for Planning Service (default: 8001)
+- **Smart Planning**: Personalized venue recommendations
+- **Group Coordination**: Invitation and response management
+- **Location Services**: Country and city selection
+- **Preference Matching**: Based on user history and ratings
+- **Real-time Updates**: Live plan status and participant responses
 
-### **Service URLs**
-- **Planning Service**: http://localhost:8001
-- **Outing-Profile-Service**: http://localhost:8002
-- **Venues Service**: http://localhost:8000
-- **API Documentation**: http://localhost:8001/docs
+## 🧠 Planning Algorithm
 
-## 📊 **Plan Lifecycle**
+1. **Input Processing**: Parse user preferences and constraints
+2. **Venue Discovery**: Query venues based on location and criteria
+3. **Personalization**: Apply user preferences and rating history
+4. **Recommendation**: Generate ranked venue suggestions
+5. **Group Management**: Handle invitations and responses
 
-1. **Created**: Plan request received and sent to Venues Service
-2. **Processing**: Venues Service is generating the plan
-3. **Completed**: Plan generated successfully with venue suggestions
-4. **Failed**: Plan generation failed (error details provided)
+## 📊 Data Flow
 
-## 🔗 **Service Communication**
-
-### **Planning Service → Outing-Profile-Service**
-- User preference retrieval
-- User profile retrieval
-
-### **Planning Service → Venues Service**
-- Plan generation requests
-- Venue search queries
-- Venue detail requests
-
-### **Venues Service → Planning Service**
-- Plan responses with venue suggestions
-- Status updates during generation
-- Completion notifications
-
-## 🎨 **Example Usage**
-
-### **Create a New Plan**
-```bash
-curl -X POST "http://localhost:8001/v1/plans/create" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "user123",
-    "venue_types": ["restaurant", "museum"],
-    "location": {
-      "latitude": 40.7589,
-      "longitude": -73.9851,
-      "city": "New York"
-    },
-    "date": "2024-01-15T18:00:00",
-    "group_size": 4,
-    "budget_range": "$$",
-    "use_personalization": true,
-    "max_venues": 3
-  }'
-```
-
-### **Get Plan Details**
-```bash
-curl "http://localhost:8001/v1/plans/{plan_id}"
-```
-
-### **Get User Plans**
-```bash
-curl "http://localhost:8001/v1/plans?user_id=user123"
-```
-
-### **Get User Preferences (from Outing-Profile-Service)**
-```bash
-curl "http://localhost:8001/v1/outing-preferences?user_id=user123"
-```
-
-## 🚧 **Future Enhancements**
-
-- **Database Integration**: Replace in-memory storage with PostgreSQL/MongoDB
-- **Booking Service Integration**: Send plans to booking service for reservations
-- **Real-time Updates**: WebSocket notifications for plan status changes
-- **Plan Templates**: Pre-defined plan templates for common outing types
-- **Collaborative Planning**: Group planning features
-- **Plan Optimization**: AI-powered venue sequencing and timing optimization
-
-## 🐛 **Troubleshooting**
-
-### **Common Issues**
-1. **Outing-Profile-Service Unreachable**: Check if service is running on port 8002
-2. **Venues Service Unreachable**: Check if service is running on port 8000
-3. **Plan Generation Timeout**: Increase timeout in venues service client
-4. **Missing Dependencies**: Ensure httpx is installed
-
-### **Logs**
-Check service logs for detailed error information:
-```bash
-# Planning Service logs
-uvicorn app.main:app --log-level debug
-
-# Outing-Profile-Service logs
-# Check your Outing-Profile-Service logs
-
-# Venues Service logs  
-uvicorn app.main:app --log-level debug
-```
-
-## 📝 **Development**
-
-### **Project Structure**
-```
-planning_service/
-├── app/
-│   ├── api/
-│   │   └── routes.py                    # API endpoints
-│   ├── models/
-│   │   └── plan_request.py              # Data models
-│   ├── services/
-│   │   ├── venues_service_client.py     # Venues Service integration
-│   │   └── outing_profile_client.py     # Outing-Profile-Service integration
-│   └── main.py                          # FastAPI application
-├── requirements.txt                      # Dependencies
-└── README.md                            # This file
-```
-
-### **Adding New Features**
-1. Create models in `app/models/`
-2. Add business logic in `app/services/`
-3. Create endpoints in `app/api/routes.py`
-4. Update tests and documentation
-
-## 📄 **License**
-
-This project is licensed under the MIT License.
+1. **Plan Creation**: UI → Planning Service → Venues Service
+2. **Recommendations**: Venues Service → Planning Service → UI
+3. **Invitations**: Planning Service → Users Service → UI
+4. **Completion**: Planning Service → Outing Profile Service

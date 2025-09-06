@@ -59,12 +59,55 @@ class UserService {
         this.saveUserToStorage(user);
         return { success: true, user };
       } else {
-        const errorText = await response.text();
-        console.error('User creation failed:', errorText);
-        return { success: false, error: 'Registration failed. Please try again.' };
+        let errorMessage = 'Registration failed. Please try again.';
+        
+        // First, try to get the response text
+        const responseText = await response.text();
+        console.error('User creation failed:', responseText);
+        
+        try {
+          // Try to parse as JSON
+          const errorData = JSON.parse(responseText);
+          
+          // Handle specific backend error messages
+          if (errorData.message) {
+            if (errorData.message.includes('email') && errorData.message.includes('already')) {
+              errorMessage = 'This email address is already registered. Please use a different email or try logging in.';
+            } else if (errorData.message.includes('username') && errorData.message.includes('already')) {
+              errorMessage = 'This username is already taken. Please choose a different username.';
+            } else if (errorData.message.includes('email') && errorData.message.includes('invalid')) {
+              errorMessage = 'Please enter a valid email address.';
+            } else if (errorData.message.includes('username') && errorData.message.includes('invalid')) {
+              errorMessage = 'Username must be at least 3 characters long and contain only letters, numbers, and underscores.';
+            } else if (errorData.message.includes('password')) {
+              errorMessage = 'Password must be at least 6 characters long.';
+            } else {
+              errorMessage = errorData.message;
+            }
+          }
+        } catch (parseError) {
+          // If we can't parse as JSON, use status codes and response text
+          console.error('Could not parse error response as JSON:', parseError);
+          
+          if (response.status === 409) {
+            errorMessage = 'This email is already in use. Please choose a different email.';
+          } else if (response.status === 400) {
+            errorMessage = 'Please check your information and try again.';
+          } else if (response.status === 422) {
+            errorMessage = 'Invalid information provided. Please check your details.';
+          } else if (responseText) {
+            // Use the raw response text if available
+            errorMessage = responseText;
+          }
+        }
+        
+        return { success: false, error: errorMessage };
       }
     } catch (error) {
       console.error('Registration error:', error);
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        return { success: false, error: 'Unable to connect to the server. Please check your internet connection and try again.' };
+      }
       return { success: false, error: 'Connection error. Please check if all services are running.' };
     }
   }
@@ -79,22 +122,32 @@ class UserService {
         const users = await response.json();
         console.log('Retrieved users:', users);
         
-        const user = users.find(u => u.username === username && u.password === password);
+        // Check if username exists first
+        const userExists = users.find(u => u.username === username);
+        if (!userExists) {
+          console.log('Login failed: Username not found');
+          return { success: false, error: 'Username not found. Please check your username or create a new account.' };
+        }
         
+        // Check if password matches
+        const user = users.find(u => u.username === username && u.password === password);
         if (user) {
           console.log('Login successful:', user);
           this.saveUserToStorage(user);
           return { success: true, user };
         } else {
-          console.log('Login failed: Invalid credentials');
-          return { success: false, error: 'Invalid username or password.' };
+          console.log('Login failed: Incorrect password');
+          return { success: false, error: 'Incorrect password. Please try again or reset your password.' };
         }
       } else {
         console.error('Login failed: API error');
-        return { success: false, error: 'Login failed. Please try again.' };
+        return { success: false, error: 'Unable to connect to the server. Please try again later.' };
       }
     } catch (error) {
       console.error('Login error:', error);
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        return { success: false, error: 'Unable to connect to the server. Please check your internet connection and try again.' };
+      }
       return { success: false, error: 'Connection error. Please check if all services are running.' };
     }
   }
@@ -146,14 +199,35 @@ class UserService {
   validateRegistrationData(userData) {
     const { username, password, email, phone } = userData;
     
-    // Validation
+    // Check for required fields
     if (!username || !password || !email) {
-      return { isValid: false, error: "Please fill in username, password, and email." };
+      const missingFields = [];
+      if (!username) missingFields.push('username');
+      if (!password) missingFields.push('password');
+      if (!email) missingFields.push('email');
+      return { isValid: false, error: `Please fill in: ${missingFields.join(', ')}.` };
     }
 
+    // Username validation
+    if (username.length < 3) {
+      return { isValid: false, error: "Username must be at least 3 characters long." };
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return { isValid: false, error: "Username can only contain letters, numbers, and underscores." };
+    }
+
+    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return { isValid: false, error: "Please enter a valid email address." };
+      return { isValid: false, error: "Please enter a valid email address (e.g., user@example.com)." };
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return { isValid: false, error: "Password must be at least 6 characters long." };
+    }
+    if (password.length > 50) {
+      return { isValid: false, error: "Password must be less than 50 characters." };
     }
 
     // Phone validation (optional)
@@ -165,8 +239,14 @@ class UserService {
   }
 
   validateLoginData(username, password) {
-    if (!username || !password) {
+    if (!username && !password) {
       return { isValid: false, error: "Please enter both username and password." };
+    }
+    if (!username) {
+      return { isValid: false, error: "Please enter your username." };
+    }
+    if (!password) {
+      return { isValid: false, error: "Please enter your password." };
     }
     return { isValid: true };
   }

@@ -51,7 +51,7 @@ const Plan = () => {
         <div style={{ fontSize: '64px', marginBottom: '24px' }}>🎯</div>
         <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>Ready to start planning?</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px' }}>
-          Our intelligent planning system will help you find the perfect venues based on your preferences, 
+          Our comprehensive venue database will help you find the perfect venues based on your preferences, 
           group size, and location. Let's create something amazing!
         </p>
         
@@ -77,7 +77,7 @@ const Plan = () => {
           border: '1px solid var(--border)'
         }}>
           <div style={{ fontSize: '32px', marginBottom: '16px' }}>📍</div>
-          <h3 style={{ marginBottom: '12px' }}>Smart Location</h3>
+          <h3 style={{ marginBottom: '12px' }}>Smart Search</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
             We'll find the best venues near your chosen location with real-time availability.
           </p>
