@@ -466,19 +466,10 @@ def add_outing_ratings(plan_id):
         
         outing = profile["outing_history"][0]
         
-        # Check if outing is in the past
-        try:
-            outing_date = datetime.fromisoformat(outing["outing_date"]).date()
-            outing_time = outing.get("outing_time", "00:00")
-            outing_datetime = datetime.combine(outing_date, datetime.strptime(outing_time, "%H:%M").time())
-            current_datetime = datetime.now().replace(tzinfo=None)
-            
-            if outing_datetime >= current_datetime:
-                logger.warning(f"Cannot rate future outing: {plan_id}")
-                return jsonify({"error": "Cannot rate future outings"}), 400
-        except:
-            logger.warning(f"Invalid outing date format for plan_id: {plan_id}")
-            return jsonify({"error": "Invalid outing date format"}), 400
+        # Allow ratings for planned and completed outings (users can rate after booking)
+        if outing.get("status") not in ["planned", "completed"]:
+            logger.warning(f"Cannot rate outing with status '{outing.get('status')}': {plan_id}")
+            return jsonify({"error": "Can only rate planned or completed outings"}), 400
         
         # Add ratings to the outing
         result = profiles_collection.update_one(
