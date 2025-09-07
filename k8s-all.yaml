@@ -121,7 +121,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.71
+          image: nikaklimenchuk/planeet-ui:react-v1.9.72
           imagePullPolicy: Always
           ports:
             - containerPort: 80
