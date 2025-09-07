@@ -178,6 +178,16 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
           setError('Please select a time.');
           return false;
         }
+        
+        // Check if the selected date is not in the past
+        const selectedDate = new Date(formData.planDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+        
+        if (selectedDate < today) {
+          setError('Cannot book plans for past dates. Please select today or a future date.');
+          return false;
+        }
         break;
       case 4:
         if (formData.venueTypes.length === 0) {
@@ -448,6 +458,7 @@ const PlanningModal = ({ isOpen, onClose, onPlanCreated }) => {
                     className="form-input"
                     value={formData.planDate}
                     onChange={handleInputChange}
+                    min={new Date().toISOString().split('T')[0]}
                     required
                   />
                 </div>
