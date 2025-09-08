@@ -3,8 +3,8 @@ from pymongo import MongoClient
 import os
 
 # MongoDB connection settings
-MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "Planeet")
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://mongo:27017")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "planeet")
 
 # Async client for FastAPI
 async_client = None

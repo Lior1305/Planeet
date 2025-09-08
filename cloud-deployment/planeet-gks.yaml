@@ -103,7 +103,7 @@ spec:
     spec:
       containers:
         - name: outing-profile-service
-          image: nikaklimenchuk/outing-profile-service:v4.0
+          image: nikaklimenchuk/outing-profile-service:v4.6
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
@@ -265,7 +265,7 @@ spec:
     spec:
       containers:
         - name: venues-service
-          image: dartoledano/venues-service:v4.3.2
+          image: dartoledano/venues-service:v4.3.6
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -327,7 +327,7 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: liorberlin/booking-service:v2.1.9
+          image: liorberlin/booking-service:v2.2.1
           imagePullPolicy: Always
           ports:
             - containerPort: 8004
@@ -384,7 +384,7 @@ spec:
     spec:
       containers:
         - name: ui-service
-          image: nikaklimenchuk/planeet-ui:react-v1.9.59
+          image: nikaklimenchuk/planeet-ui:react-v1.9.72
           imagePullPolicy: Always
           ports:
             - containerPort: 80
