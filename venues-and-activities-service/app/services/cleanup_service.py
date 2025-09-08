@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class VenuesCleanupService:
     """Service to handle periodic cleanup of venues collection data."""
     
-    def __init__(self, cleanup_interval_minutes: int = 5):
+    def __init__(self, cleanup_interval_minutes: int = 20):
         self.cleanup_interval_minutes = cleanup_interval_minutes
         self.cleanup_task: Optional[asyncio.Task] = None
         self.is_running = False
@@ -93,4 +93,4 @@ class VenuesCleanupService:
         await self._delete_venues_data()
 
 # Global cleanup service instance
-cleanup_service = VenuesCleanupService(cleanup_interval_minutes=5)
+cleanup_service = VenuesCleanupService(cleanup_interval_minutes=20)
